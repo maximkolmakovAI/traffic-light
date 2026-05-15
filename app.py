@@ -313,6 +313,7 @@ with tab_main:
             # ── Read selection from session state (populated BEFORE rerun) ──
             sel_client = ""
             sel_crit_name = ""
+            sel_reasoning = ""
             try:
                 ss = st.session_state.get("tl_table", {})
                 if isinstance(ss, dict):
@@ -329,6 +330,8 @@ with tab_main:
                             col_name = scols[0]
                             if col_name in crit_cols:
                                 sel_crit_name = crit_cols[col_name][1]
+                                if sel_client in details_map and sel_crit_name in details_map[sel_client]:
+                                    sel_reasoning = details_map[sel_client][sel_crit_name]["reasoning"]
             except Exception:
                 pass
 
@@ -339,7 +342,6 @@ with tab_main:
                 sel_client = manual_client
 
             # ── Criterion selector (when client is chosen) ──
-            sel_reasoning = ""
             if sel_client:
                 crit_list = sorted(crit_cols.keys())
                 sel_crit_key = st.selectbox("📌 Критерий:", [""] + crit_list, key="crit_sel",
