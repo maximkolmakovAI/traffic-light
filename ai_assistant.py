@@ -12,7 +12,7 @@ try:
 except Exception:
     API_KEY = os.environ.get("AI_API_KEY", "sk-2dbPPD0-PWa-1GUgVfonjg")
 
-MODEL = "ollama/qwen3.5:35b"
+MODELS = ["ollama/qwen3.5:35b", "qwen3.5:35b", "ollama/llama3.2:3b", "llama3.2:3b"]
 MAX_SUMMARY_LINES = 100
 SESSION_TIMEOUT_MINUTES = 60
 
@@ -147,29 +147,34 @@ def ask_ai(user_message, chat_history):
 
     messages.append({"role": "user", "content": user_message})
 
-    try:
-        resp = requests.post(
-            API_URL,
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": MODEL,
-                "messages": messages,
-                "temperature": 0.3,
-                "max_tokens": 2000,
-            },
-            timeout=120,
-            verify=False,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        reply = data["choices"][0]["message"]["content"]
-        return reply
-    except requests.exceptions.Timeout:
-        return "⏳ Извините, сервер ИИ не ответил вовремя. Попробуйте ещё раз."
-    except requests.exceptions.HTTPError as e:
-        return f"⚠️ Ошибка HTTP {e.response.status_code}: {e.response.text[:200]}"
-    except Exception as e:
-        return f"⚠️ Ошибка подключения к ИИ: {e}"
+    last_err = ""
+    for model in MODELS:
+        try:
+            resp = requests.post(
+                API_URL,
+                headers={
+                    "Authorization": f"Bearer {API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "temperature": 0.3,
+                    "max_tokens": 2000,
+                },
+                timeout=120,
+                verify=False,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            reply = data["choices"][0]["message"]["content"]
+            return reply
+        except requests.exceptions.Timeout:
+            last_err = "⏳ Сервер ИИ не ответил вовремя."
+        except requests.exceptions.HTTPError as e:
+            last_err = f"⚠️ Сервер ИИ временно недоступен (модель {model}). Попробуйте позже."
+            if e.response.status_code != 500:
+                last_err = f"⚠️ Ошибка HTTP {e.response.status_code}: {e.response.text[:200]}"
+        except Exception as e:
+            last_err = f"⚠️ Ошибка подключения к ИИ: {e}"
+    return last_err

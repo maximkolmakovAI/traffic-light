@@ -2,6 +2,8 @@
 import pandas as pd
 import plotly.express as px
 import io
+import threading
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -19,16 +21,25 @@ COLOR_SUBTLE = {"green": "#d4edda", "yellow": "#fff3cd", "red": "#f8d7da"}
 
 st.markdown("""
 <style>
-    .color-green { background-color: #d4edda; }
-    .color-yellow { background-color: #fff3cd; }
-    .color-red { background-color: #f8d7da; }
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] { gap: 0.15rem; }
-    [data-testid="stDataFrame"] { width: 100% !important; }
-    .stMainBlock { padding-top: 0; }
-    .chat-user { background-color: #e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
-    .chat-ai { background-color: #f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
+    .chat-user { background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
+    .chat-ai { background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] { gap:0.15rem; }
+    .cell-info { background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; }
 </style>
 """, unsafe_allow_html=True)
+
+
+def get_details_map():
+    conn = get_conn()
+    dm = {}
+    cur = conn.execute("SELECT client_name, criterion_name, status, reasoning FROM traffic_light_details")
+    for r in cur.fetchall():
+        cn = r["client_name"]
+        if cn not in dm:
+            dm[cn] = {}
+        dm[cn][r["criterion_name"]] = {"status": r["status"], "reasoning": r["reasoning"]}
+    conn.close()
+    return dm
 
 
 def load_traffic_data():
@@ -46,14 +57,7 @@ def load_traffic_data():
         FROM traffic_light_results t
         ORDER BY CASE t.final_color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, t.client_name
     """, conn)
-
-    details_map = {}
-    cur = conn.execute("SELECT client_name, criterion_name, status, reasoning FROM traffic_light_details")
-    for r in cur.fetchall():
-        cn = r["client_name"]
-        if cn not in details_map:
-            details_map[cn] = {}
-        details_map[cn][r["criterion_name"]] = {"status": r["status"], "reasoning": r["reasoning"]}
+    details_map = get_details_map()
     conn.close()
 
     crit_cols = {
@@ -91,6 +95,25 @@ def render_color_row_2(row, fdf):
     return [f"background-color: {bg}"] * len(row)
 
 
+def _extract_selection(selection):
+    """Extract (client_name, column_name) from st.dataframe selection."""
+    try:
+        sel = selection.selection if hasattr(selection, "selection") else selection
+        sel_rows = sel.rows if hasattr(sel, "rows") else sel.get("rows", [])
+        sel_cols = sel.columns if hasattr(sel, "columns") else sel.get("columns", [])
+        return sel_rows, sel_cols
+    except Exception:
+        return [], []
+
+
+def async_ai(user_msg, history_copy):
+    try:
+        reply = ask_ai(user_msg, history_copy)
+        st.session_state["_ai_reply_ready"] = reply
+    except Exception as e:
+        st.session_state["_ai_reply_ready"] = f"⚠️ Ошибка: {e}"
+
+
 init_db()
 
 st.title("🚦 Светофор по клиентской базе")
@@ -99,16 +122,32 @@ with st.popover("💬 Чат с ИИ", use_container_width=True):
     st.caption("Спрашивайте о клиентах, критериях и результатах")
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+
+    if "_ai_reply_ready" in st.session_state and st.session_state["_ai_reply_ready"] is not None:
+        reply = st.session_state["_ai_reply_ready"]
+        st.session_state.chat_history.append({"role": "assistant", "content": reply,
+                                              "timestamp": datetime.now().isoformat()})
+        st.session_state["_ai_reply_ready"] = None
+        st.session_state["_ai_busy"] = False
+
     for msg in st.session_state.chat_history[-6:]:
-        icon = "🙋" if msg["role"] == "user" else "🤖"
-        st.markdown(f"<div class='chat-{msg['role']}'><small>{icon} {msg['content'][:300]}</small></div>",
+        role = msg["role"]
+        icon = "🙋" if role == "user" else "🤖"
+        st.markdown(f"<div class='chat-{role}'><small>{icon} {msg['content'][:300]}</small></div>",
                     unsafe_allow_html=True)
+
+    if st.session_state.get("_ai_busy", False):
+        st.markdown("<small>⏳ ИИ думает…</small>", unsafe_allow_html=True)
+
     user_input = st.chat_input("Задайте вопрос о данных…", key="ai_chat_popover")
-    if user_input:
-        st.session_state.chat_history.append({"role": "user", "content": user_input, "timestamp": datetime.now().isoformat()})
-        with st.spinner("ИИ анализирует…"):
-            reply = ask_ai(user_input, st.session_state.chat_history)
-        st.session_state.chat_history.append({"role": "assistant", "content": reply, "timestamp": datetime.now().isoformat()})
+    if user_input and not st.session_state.get("_ai_busy", False):
+        st.session_state.chat_history.append({"role": "user", "content": user_input,
+                                              "timestamp": datetime.now().isoformat()})
+        st.session_state["_ai_busy"] = True
+        st.session_state["_ai_reply_ready"] = None
+        hist_copy = list(st.session_state.chat_history)
+        t = threading.Thread(target=async_ai, args=(user_input, hist_copy), daemon=True)
+        t.start()
         st.rerun()
 
 tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
@@ -116,7 +155,7 @@ tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
 ])
 
 with tab_upload_single:
-    st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
+    st.info("⚠️ **Недоступно в тестовой версии.**")
     uploaded_file = st.file_uploader("Выберите Excel-файл отчета", type=["xls", "xlsx"], key="single_upload")
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
@@ -126,30 +165,28 @@ with tab_upload_single:
         if detection["file_type"] == "unknown":
             st.error(f"Не удалось определить тип файла: {uploaded_file.name}")
         else:
-            st.info(f"**Определен тип:** {detection['label']}")
+            st.info(f"**{detection['label']}**")
             batch_id = int(datetime.now().timestamp())
             state_key = f"conflict_{uploaded_file.name}"
             if st.session_state.get(state_key) != "resolved":
                 conflicts = check_conflicts(detection["file_type"], detection["period"])
                 if conflicts:
-                    st.warning("Обнаружены конфликты")
+                    st.warning("Конфликты")
                     for c in conflicts:
                         st.write(f"- {c['message']}")
-                    col_a, col_b, col_c = st.columns(3)
-                    if col_a.button("🔄 Перезаписать", key=f"rep_{uploaded_file.name}", use_container_width=True):
+                    ca, cb, cc = st.columns(3)
+                    if ca.button("🔄 Перезаписать", key=f"ra_{uploaded_file.name}", use_container_width=True):
                         buf.seek(0)
                         result = load_file_by_buffer(buf, uploaded_file.name, batch_id, resolution="replace")
                         if result["success"]:
                             resolve_conflicts(detection["file_type"], detection["period"], "replace", batch_id)
-                            st.success(f"Загружено {result['loaded']} записей!")
+                            st.success(f"Загружено {result['loaded']}")
                             st.session_state[state_key] = "resolved"
                             st.rerun()
-                        else:
-                            st.error(f"Ошибка: {result.get('error','')}")
-                    if col_b.button("⏭️ Пропустить", key=f"skip_{uploaded_file.name}", use_container_width=True):
+                    if cb.button("⏭️ Пропустить", key=f"sk_{uploaded_file.name}", use_container_width=True):
                         st.session_state[state_key] = "resolved"
                         st.rerun()
-                    if col_c.button("❌ Отменить", key=f"can_{uploaded_file.name}", use_container_width=True):
+                    if cc.button("❌ Отменить", key=f"cn_{uploaded_file.name}", use_container_width=True):
                         st.session_state[state_key] = "cancelled"
                         st.rerun()
                 else:
@@ -157,37 +194,37 @@ with tab_upload_single:
                     with st.spinner("Загрузка…"):
                         result = load_file_by_buffer(buf, uploaded_file.name, batch_id)
                     if result["success"]:
-                        st.success(f"✅ Загружено {result['loaded']} записей!")
+                        st.success(f"✅ {result['loaded']} записей")
                         st.session_state[state_key] = "resolved"
                     else:
                         st.error(f"Ошибка: {result.get('error','')}")
 
 with tab_upload_folder:
-    st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
-    folder_path = st.text_input("Путь к папке с отчетами",
+    st.info("⚠️ **Недоступно в тестовой версии.**")
+    folder_path = st.text_input("Путь к папке",
         value=str(Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")),
         key="folder_path_input")
-    if st.button("📂 Загрузить все файлы из папки", use_container_width=True):
+    if st.button("📂 Загрузить всё", use_container_width=True):
         folder = Path(folder_path)
         if not folder.exists():
-            st.error(f"Папка не найдена: {folder_path}")
+            st.error(f"Папка не найдена")
         else:
             batch_id = int(datetime.now().timestamp())
             results, errors = [], []
-            progress = st.progress(0, text="Загрузка файлов…")
-            files = []
+            pb = st.progress(0, text="Загрузка…")
+            flist = []
             for ext in ["*.xls", "*.xlsx", "*.XLS", "*.XLSX"]:
-                files.extend(sorted(folder.glob(ext)))
-            for i, filepath in enumerate(files):
-                progress.progress((i + 1) / len(files), text=f"Обработка: {filepath.name}")
-                result = load_file_by_path(filepath, batch_id, resolution="replace")
-                results.append(result)
-                if not result["success"]:
-                    errors.append(f"{filepath.name}: {result.get('error','')}")
-            progress.empty()
-            total = sum(r.get("loaded", 0) for r in results if r.get("success"))
+                flist.extend(sorted(folder.glob(ext)))
+            for i, fp in enumerate(flist):
+                pb.progress((i + 1) / len(flist), text=f"Обработка: {fp.name}")
+                r = load_file_by_path(fp, batch_id, resolution="replace")
+                results.append(r)
+                if not r["success"]:
+                    errors.append(f"{fp.name}: {r.get('error','')}")
+            pb.empty()
             sc = sum(1 for r in results if r.get("success"))
-            st.success(f"✅ Загружено {sc}/{len(files)} файлов, {total} записей")
+            td = sum(r.get("loaded", 0) for r in results if r.get("success"))
+            st.success(f"✅ {sc}/{len(flist)} файлов, {td} записей")
             if errors:
                 with st.expander("Ошибки"):
                     for e in errors:
@@ -204,7 +241,6 @@ with tab_main:
         "SELECT final_color, COUNT(*) as cnt FROM traffic_light_results GROUP BY final_color"
     ).fetchall()
     conn.close()
-
     counts = {"green": 0, "yellow": 0, "red": 0}
     for r in counts_data:
         counts[r["final_color"]] = r["cnt"]
@@ -212,12 +248,10 @@ with tab_main:
 
     col1, col2 = st.columns(2)
     if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
-        with st.spinner("Загрузка данных…"):
+        with st.spinner("Загрузка…"):
             try:
                 run_all_etl(clear_first=True)
-                st.success("Данные из файлов загружены!")
             except Exception:
-                st.info("Исходные файлы не найдены. Загружаю демо-данные для тестирования.")
                 seed_demo_data()
         with st.spinner("Расчет светофора…"):
             calculate_traffic_light()
@@ -231,17 +265,21 @@ with tab_main:
         st.rerun()
 
     if total > 0:
-        mc1, mc2 = st.columns([1, 1])
-        with mc1:
-            mc1a, mc1b, mc1c = st.columns(3)
-            mc1a.metric("🟢 Зеленые", counts.get("green", 0),
-                        f"{counts.get('green',0)/total*100:.0f}%" if total else "0%", border=True)
-            mc1b.metric("🟡 Желтые", counts.get("yellow", 0),
-                        f"{counts.get('yellow',0)/total*100:.0f}%" if total else "0%", border=True)
-            mc1c.metric("🔴 Красные", counts.get("red", 0),
-                        f"{counts.get('red',0)/total*100:.0f}%" if total else "0%", border=True)
+        m1, m2 = st.columns([1, 1])
+        with m1:
+            ma, mb, mc = st.columns(3)
+            ma.metric("🟢 Зеленые", counts.get("green", 0), border=True)
+            mb.metric("🟡 Желтые", counts.get("yellow", 0), border=True)
+            mc.metric("🔴 Красные", counts.get("red", 0), border=True)
 
         df, crit_cols, details_map = load_traffic_data()
+
+        # ── Cell info panel (above table) ──
+        selection = None
+        sel_client = st.session_state.get("_selected_client", None)
+        sel_cell_criterion = ""
+        sel_cell_reasoning = ""
+
         if not df.empty:
             flt1, flt2 = st.columns([1, 1])
             with flt1:
@@ -262,17 +300,16 @@ with tab_main:
             display_cols = ["Клиент", "Менеджер", "Окончание",
                             "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
                             "Крит", "Вспом"]
-
-            col_help = {
-                "Соб.1р/кв": "Событие 1 раз в квартал (критичный)",
-                "Жалобы": "Отсутствие жалоб за 3 мес (вспомогательный)",
-                "Наряды": "Отсутствие нарядов (вспомогательный)",
-                "Соб.2мес": "Событие за 2 мес до окончания (критичный)",
-                "Счет": "Счёт на продление за 2 мес (критичный)",
-                "Неп.док": "Неподписанные документы (вспомогательный)",
-                "Крит": "Критические нарушения",
-                "Вспом": "Вспомогательные нарушения",
-            }
+            col_help = {k: v for k, v in [
+                ("Соб.1р/кв", "Событие 1 раз в квартал (критичный)"),
+                ("Жалобы", "Отсутствие жалоб за 3 мес (вспомогательный)"),
+                ("Наряды", "Отсутствие нарядов (вспомогательный)"),
+                ("Соб.2мес", "Событие за 2 мес до окончания (критичный)"),
+                ("Счет", "Счёт на продление за 2 мес (критичный)"),
+                ("Неп.док", "Неподписанные документы (вспомогательный)"),
+                ("Крит", "Критические нарушения"),
+                ("Вспом", "Вспомогательные нарушения"),
+            ]}
 
             styled = fdf[display_cols].style.apply(lambda row: render_color_row_2(row, fdf), axis=1)
             for col in ["Соб.1р/кв", "Жалобы", "Наряды", "Неп.док"]:
@@ -280,50 +317,64 @@ with tab_main:
                     styled = styled.format({col: lambda v: v[:55] if len(str(v)) > 55 else v}, subset=[col])
 
             col_config = {"Клиент": st.column_config.TextColumn(width="medium")}
-            for k, v in col_help.items():
+            for k, v in col_help:
                 col_config[k] = st.column_config.Column(help=v, width="small")
 
             selection = st.dataframe(styled, use_container_width=True, height=680,
                 on_select="rerun", selection_mode="single-cell", key="tl_table",
                 column_config=col_config)
 
-            sel_client = None
-            sel_crit_display = None
-            sel_crit_full = None
+            # ── Extract selection info ──
             try:
-                sel_rows = selection.selection.rows
-                sel_cols = selection.selection.columns
-                if sel_rows and len(sel_rows) > 0:
-                    ri = sel_rows[0]
+                sel = selection.selection if hasattr(selection, "selection") else (selection or {})
+                srows = sel.rows if hasattr(sel, "rows") else sel.get("rows", [])
+                scols = sel.columns if hasattr(sel, "columns") else sel.get("columns", [])
+                if srows and len(srows) > 0:
+                    ri = srows[0]
                     if 0 <= ri < len(fdf):
                         sel_client = fdf.iloc[ri]["Клиент"]
-                        if sel_cols and len(sel_cols) > 0:
-                            col_name = sel_cols[0]
+                        st.session_state["_selected_client"] = sel_client
+                        if scols and len(scols) > 0:
+                            col_name = scols[0]
                             if col_name in crit_cols:
                                 _, cname_full = crit_cols[col_name]
-                                sel_crit_display = col_name
-                                sel_crit_full = cname_full
-            except (AttributeError, IndexError, TypeError):
+                                sel_cell_criterion = cname_full
+                                if sel_client in details_map and cname_full in details_map[sel_client]:
+                                    sel_cell_reasoning = details_map[sel_client][cname_full]["reasoning"]
+            except Exception:
                 pass
 
-            if sel_client is None:
-                sel_client = st.session_state.get("_selected_client", None)
-            else:
-                st.session_state["_selected_client"] = sel_client
+            # ── Cell info panel (above table, below buttons/filters) ──
+            if sel_cell_criterion and sel_cell_reasoning:
+                st.markdown(
+                    f"<div class='cell-info'>"
+                    f"<b>🔍 {sel_client} → {sel_cell_criterion}</b><br>"
+                    f"<small>{sel_cell_reasoning}</small></div>",
+                    unsafe_allow_html=True,
+                )
+            elif sel_client:
+                st.markdown(
+                    f"<div class='cell-info'>"
+                    f"<b>🔍 {sel_client}</b> — выберите ячейку критерия для просмотра расчёта</div>",
+                    unsafe_allow_html=True,
+                )
 
-            selected_client = sel_client
-
-            st.markdown(f"**🔍 Детализация: {selected_client}**")
-            details = get_details_for_client(selected_client) if selected_client else []
+            # ── Client details below table (before pie chart) ──
+            st.divider()
+            st.markdown(f"**📋 Детализация по клиенту: {sel_client}**")
+            details = get_details_for_client(sel_client) if sel_client else []
             if details:
-                for d in details:
+                det_cols = st.columns(3)
+                for i, d in enumerate(details):
                     icon = "✅" if d["status"] else "❌"
-                    color = "#2ecc71" if d["status"] else "#e74c3c"
-                    st.markdown(
-                        f"<span style='color:{color}'><b>{icon} {d['criterion_name']}</b></span>  \n"
+                    clr = "#2ecc71" if d["status"] else "#e74c3c"
+                    det_cols[i % 3].markdown(
+                        f"<span style='color:{clr}'><b>{icon} {d['criterion_name']}</b></span>  \n"
                         f"<small>{d['reasoning'][:200]}</small>",
                         unsafe_allow_html=True,
                     )
+            else:
+                st.caption("Нет данных (возможно, светофор не пересчитан)")
 
             csv = fdf.to_csv(index=False).encode("utf-8-sig")
             st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
