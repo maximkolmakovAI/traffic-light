@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from db.database import init_db, get_conn
+from db.seed import seed_demo_data
 from etl.loader import run_all_etl
 from etl.single_load import load_file_by_buffer, load_file_by_path, check_conflicts, resolve_conflicts
 from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client
@@ -222,8 +223,13 @@ with left_col:
 
         col1, col2 = st.columns(2)
         if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
-            with st.spinner("Загрузка..."):
-                run_all_etl(clear_first=True)
+            with st.spinner("Загрузка данных из исходных файлов..."):
+                try:
+                    run_all_etl(clear_first=True)
+                    st.success("Данные из файлов загружены!")
+                except (FileNotFoundError, Exception) as e:
+                    st.info("Исходные файлы не найдены. Загружаю демо-данные для тестирования.")
+                    seed_demo_data()
             with st.spinner("Расчет светофора..."):
                 calculate_traffic_light()
             st.success("Готово!")
