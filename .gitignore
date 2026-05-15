@@ -18,8 +18,7 @@ env/
 # Streamlit user config (not project config)
 # Project .streamlit/config.toml IS tracked
 
-# Database
-data/*.db
+# Database (exclude WAL/SHM, but track the main DB for deployment)
 data/*.db-wal
 data/*.db-shm
 

@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "traffic_light.db"
 
-SOURCE_DIR = Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")
+SOURCE_DIR = BASE_DIR / "data" / "source"
 
 CRITERIA = [
     {"id": "crit_event_quarter", "name": "Событие 1 раз в квартал (завершенное или перенесенное)", "critical": True, "source": "events"},
