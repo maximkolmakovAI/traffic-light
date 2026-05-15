@@ -255,33 +255,34 @@ with tab_main:
                 seed_demo_data()
         with st.spinner("Расчет светофора…"):
             calculate_traffic_light()
+        st.session_state["_refresh_data"] = True
         st.success("Готово!")
         st.rerun()
 
     if col2.button("📊 Пересчитать светофор", use_container_width=True):
         with st.spinner("Расчет…"):
             calculate_traffic_light()
+        st.session_state["_refresh_data"] = True
         st.success("Готово!")
         st.rerun()
 
     if total > 0:
-        m1, m2 = st.columns([1, 1])
-        with m1:
-            ma, mb, mc = st.columns(3)
-            ma.metric("🟢 Зеленые", counts.get("green", 0), border=True)
-            mb.metric("🟡 Желтые", counts.get("yellow", 0), border=True)
-            mc.metric("🔴 Красные", counts.get("red", 0), border=True)
+        ma, mb, mc = st.columns(3)
+        ma.metric("🟢 Зеленые", counts.get("green", 0), border=True)
+        mb.metric("🟡 Желтые", counts.get("yellow", 0), border=True)
+        mc.metric("🔴 Красные", counts.get("red", 0), border=True)
 
-        df, crit_cols, details_map = load_traffic_data()
+        # cache data in session_state so cell clicks dont reload DB
+        if "_cached_df" not in st.session_state or st.session_state.pop("_refresh_data", False):
+            st.session_state["_cached_df"], st.session_state["_cached_crit"], st.session_state["_cached_dm"] = load_traffic_data()
+        df, crit_cols, details_map = st.session_state["_cached_df"], st.session_state["_cached_crit"], st.session_state["_cached_dm"]
 
-        # ── Cell info panel (above table) ──
-        selection = None
-        sel_client = st.session_state.get("_selected_client", None)
-        sel_cell_criterion = ""
-        sel_cell_reasoning = ""
+        sel_client = st.session_state.get("_selected_client", "")
+        sel_cell_criterion = st.session_state.get("_cell_criterion", "")
+        sel_cell_reasoning = st.session_state.get("_cell_reasoning", "")
 
         if not df.empty:
-            flt1, flt2 = st.columns([1, 1])
+            flt1, flt2, flt3 = st.columns([1, 1, 2])
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter", label_visibility="collapsed")
@@ -326,55 +327,74 @@ with tab_main:
 
             # ── Extract selection info ──
             try:
-                sel = selection.selection if hasattr(selection, "selection") else (selection or {})
-                srows = sel.rows if hasattr(sel, "rows") else sel.get("rows", [])
-                scols = sel.columns if hasattr(sel, "columns") else sel.get("columns", [])
-                if srows and len(srows) > 0:
-                    ri = srows[0]
-                    if 0 <= ri < len(fdf):
-                        sel_client = fdf.iloc[ri]["Клиент"]
-                        st.session_state["_selected_client"] = sel_client
-                        if scols and len(scols) > 0:
-                            col_name = scols[0]
-                            if col_name in crit_cols:
-                                _, cname_full = crit_cols[col_name]
-                                sel_cell_criterion = cname_full
-                                if sel_client in details_map and cname_full in details_map[sel_client]:
-                                    sel_cell_reasoning = details_map[sel_client][cname_full]["reasoning"]
+                sel = selection if isinstance(selection, dict) else {}
+                sel = sel.get("selection", selection) if isinstance(sel, dict) else getattr(selection, "selection", {})
+                srows = sel.get("rows", []) if isinstance(sel, dict) else getattr(sel, "rows", [])
+                scols = sel.get("columns", []) if isinstance(sel, dict) else getattr(sel, "columns", [])
             except Exception:
-                pass
+                srows, scols = [], []
 
-            # ── Cell info panel (above table, below buttons/filters) ──
-            if sel_cell_criterion and sel_cell_reasoning:
-                st.markdown(
-                    f"<div class='cell-info'>"
-                    f"<b>🔍 {sel_client} → {sel_cell_criterion}</b><br>"
-                    f"<small>{sel_cell_reasoning}</small></div>",
-                    unsafe_allow_html=True,
-                )
-            elif sel_client:
-                st.markdown(
-                    f"<div class='cell-info'>"
-                    f"<b>🔍 {sel_client}</b> — выберите ячейку критерия для просмотра расчёта</div>",
-                    unsafe_allow_html=True,
-                )
+            if srows and len(srows) > 0:
+                ri = srows[0]
+                if 0 <= ri < len(fdf):
+                    sel_client = fdf.iloc[ri]["Клиент"]
+                    st.session_state["_selected_client"] = sel_client
+                    if scols and len(scols) > 0:
+                        col_name = scols[0]
+                        if col_name in crit_cols:
+                            _, cname_full = crit_cols[col_name]
+                            sel_cell_criterion = cname_full
+                            st.session_state["_cell_criterion"] = cname_full
+                            if sel_client in details_map and cname_full in details_map[sel_client]:
+                                sel_cell_reasoning = details_map[sel_client][cname_full]["reasoning"]
+                                st.session_state["_cell_reasoning"] = sel_cell_reasoning
+                            else:
+                                st.session_state["_cell_reasoning"] = ""
 
-            # ── Client details below table (before pie chart) ──
-            st.divider()
-            st.markdown(f"**📋 Детализация по клиенту: {sel_client}**")
-            details = get_details_for_client(sel_client) if sel_client else []
-            if details:
-                det_cols = st.columns(3)
-                for i, d in enumerate(details):
-                    icon = "✅" if d["status"] else "❌"
-                    clr = "#2ecc71" if d["status"] else "#e74c3c"
-                    det_cols[i % 3].markdown(
-                        f"<span style='color:{clr}'><b>{icon} {d['criterion_name']}</b></span>  \n"
-                        f"<small>{d['reasoning'][:200]}</small>",
+            # ── Manual client selector ──
+            all_clients = sorted(fdf["Клиент"].unique().tolist())
+            manual_client = st.selectbox("🔍 Выберите клиента для детализации",
+                                         [""] + all_clients, key="manual_client_select")
+            if manual_client and manual_client != sel_client:
+                sel_client = manual_client
+                st.session_state["_selected_client"] = manual_client
+                sel_cell_criterion = ""
+                st.session_state["_cell_criterion"] = ""
+                sel_cell_reasoning = ""
+                st.session_state["_cell_reasoning"] = ""
+
+            # ── Cell info panel (above table) ──
+            if sel_client:
+                if sel_cell_criterion and sel_cell_reasoning:
+                    st.markdown(
+                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_cell_criterion}</b><br>"
+                        f"<small>{sel_cell_reasoning}</small></div>",
                         unsafe_allow_html=True,
                     )
-            else:
-                st.caption("Нет данных (возможно, светофор не пересчитан)")
+                else:
+                    st.markdown(
+                        f"<div class='cell-info'><b>🔍 {sel_client}</b>"
+                        f" — выберите ячейку критерия в таблице для просмотра расчёта</div>",
+                        unsafe_allow_html=True,
+                    )
+
+            # ── Client details below table ──
+            if sel_client:
+                st.divider()
+                st.markdown(f"**📋 Детализация по клиенту: {sel_client}**")
+                details = get_details_for_client(sel_client)
+                if details:
+                    det_cols = st.columns(3)
+                    for i, d in enumerate(details):
+                        icon = "✅" if d["status"] else "❌"
+                        clr = "#2ecc71" if d["status"] else "#e74c3c"
+                        det_cols[i % 3].markdown(
+                            f"<span style='color:{clr}'><b>{icon} {d['criterion_name']}</b></span>  \n"
+                            f"<small>{d['reasoning'][:200]}</small>",
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.caption("Нет данных (светофор не пересчитан)")
 
             csv = fdf.to_csv(index=False).encode("utf-8-sig")
             st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
