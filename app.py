@@ -38,15 +38,15 @@ def load_traffic_data():
     df = pd.read_sql("""
         SELECT t.client_name AS "Клиент",
                t.manager AS "Менеджер",
-               t.contract_end AS "Дата окончания договора",
-               CASE t.crit_event_quarter WHEN 1 THEN '✅' ELSE '❌' END AS "Событие 1р/кв",
-               CASE t.crit_no_complaints WHEN 1 THEN '✅' ELSE '❌' END AS "Нет жалоб",
-               CASE t.crit_no_rejected_orders WHEN 1 THEN '✅' ELSE '❌' END AS "Нет нарядов",
-               CASE t.crit_event_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Событие за 2 мес",
-               CASE t.crit_invoice_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Счет на продление",
-               CASE t.crit_no_unsigned_docs WHEN 1 THEN '✅' ELSE '❌' END AS "Неподписанные док-ты",
-               t.critical_bad AS "Крит.наруш",
-               t.auxiliary_bad AS "Вспом.наруш",
+               t.contract_end AS "Дата окончания",
+               CASE t.crit_event_quarter WHEN 1 THEN '✅' ELSE '❌' END AS "Соб.1р/кв",
+               CASE t.crit_no_complaints WHEN 1 THEN '✅' ELSE '❌' END AS "Жалобы",
+               CASE t.crit_no_rejected_orders WHEN 1 THEN '✅' ELSE '❌' END AS "Наряды",
+               CASE t.crit_event_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Соб.2мес",
+               CASE t.crit_invoice_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Счет",
+               CASE t.crit_no_unsigned_docs WHEN 1 THEN '✅' ELSE '❌' END AS "Неп.док",
+               t.critical_bad AS "Крит",
+               t.auxiliary_bad AS "Вспом",
                t.final_color AS "Цвет"
         FROM traffic_light_results t
         ORDER BY CASE t.final_color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, t.client_name
@@ -250,7 +250,7 @@ with left_col:
             mc3.metric("🔴 Красная зона", counts.get("red", 0),
                        f"{counts.get('red',0)/total*100:.0f}%" if total else "0%", border=True)
 
-            st.divider()
+            st.markdown("<br>", unsafe_allow_html=True)
 
             df = load_traffic_data()
             if not df.empty:
@@ -274,24 +274,60 @@ with left_col:
 
                 display_cols = [c for c in fdf.columns if c != "Цвет"]
 
+                col_help = {
+                    "Соб.1р/кв": "Событие 1 раз в квартал: есть завершённое/перенесённое событие хотя бы в 1 из 3 месяцев (критичный)",
+                    "Жалобы": "Отсутствие жалоб за 3 мес: клиент не должен быть в списке жалоб (вспомогательный)",
+                    "Наряды": "Отсутствие нарядов 'отклонён клиентом' (вспомогательный)",
+                    "Соб.2мес": "Событие за 2 мес до окончания договора (только для договоров за 30-90 дней до конца, критичный)",
+                    "Счет": "Счёт на продление за 2 мес до окончания (только для договоров за 30-90 дней до конца, критичный)",
+                    "Неп.док": "Отсутствие неподписанных документов (вспомогательный)",
+                    "Крит": "Количество критических нарушений",
+                    "Вспом": "Количество вспомогательных нарушений",
+                }
+
                 styled = fdf.style.apply(render_color_row, axis=1)
-                st.dataframe(
+                selection = st.dataframe(
                     styled,
                     use_container_width=True,
-                    height=500,
-                    column_config={"Клиент": st.column_config.TextColumn(width="medium")},
+                    height=420,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="tl_table",
+                    column_config={
+                        "Клиент": st.column_config.TextColumn(width="medium"),
+                        **{k: st.column_config.Column(help=v) for k, v in col_help.items()},
+                    },
                 )
 
-                selected_client = st.selectbox("🔍 Показать детали по клиенту", [""] + sorted(fdf["Клиент"].unique().tolist()))
+                sel_client = None
+                try:
+                    sel_rows = selection.selection.rows
+                    if sel_rows:
+                        row_idx = sel_rows[0]
+                        if 0 <= row_idx < len(fdf):
+                            sel_client = fdf.iloc[row_idx]["Клиент"]
+                except (AttributeError, IndexError, TypeError):
+                    pass
+
+                if sel_client is None:
+                    sel_client = st.session_state.get("_selected_client", None)
+                else:
+                    st.session_state["_selected_client"] = sel_client
+
+                selected_client = sel_client
                 if selected_client:
-                    st.caption(f"Детализация для: {selected_client}")
+                    st.markdown(f"**🔍 Детализация: {selected_client}**")
                     details = get_details_for_client(selected_client)
                     if details:
-                        for d in details:
+                        det_cols = st.columns(3)
+                        for i, d in enumerate(details):
                             icon = "✅" if d["status"] else "❌"
-                            st.markdown(f"**{icon} {d['criterion_name']}**  \n{d['reasoning']}")
-                    else:
-                        st.caption("Нет детальных данных (возможно, светофор не пересчитан)")
+                            color = "#2ecc71" if d["status"] else "#e74c3c"
+                            det_cols[i % 3].markdown(
+                                f"<span style='color:{color}'><b>{icon} {d['criterion_name']}</b></span>  \n"
+                                f"<small>{d['reasoning'][:120]}</small>",
+                                unsafe_allow_html=True,
+                            )
 
                 csv = fdf.to_csv(index=False).encode("utf-8-sig")
                 st.download_button("⬇️ Скачать CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
