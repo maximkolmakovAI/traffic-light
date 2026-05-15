@@ -305,21 +305,13 @@ with tab_main:
             for k, v in {"Соб.1р/кв":"Событие 1 раз в квартал (критичный)","Жалобы":"Отсутствие жалоб за 3 мес (вспом)","Наряды":"Отсутствие нарядов (вспом)","Соб.2мес":"Событие за 2 мес до окончания (критичный)","Счет":"Счёт на продление за 2 мес (критичный)","Неп.док":"Неподписанные документы (вспом)","Крит":"Критические нарушения","Вспом":"Вспомогательные нарушения"}.items():
                 col_config[k] = st.column_config.Column(help=v, width="small")
 
-            # dataframe with on_select — selection stored in st.session_state["tl_table"]
-            st.dataframe(styled, use_container_width=True, height=680,
-                on_select="rerun", selection_mode="single-cell", key="tl_table",
-                column_config=col_config)
-
-            # ── Read selection from session state (populated BEFORE rerun) ──
+            # ── Extract selection BEFORE dataframe ──
             sel_client = ""
             sel_crit_name = ""
             sel_reasoning = ""
             try:
                 ss = st.session_state.get("tl_table", {})
-                if isinstance(ss, dict):
-                    sel_data = ss.get("selection", ss)
-                else:
-                    sel_data = getattr(ss, "selection", {})
+                sel_data = ss.get("selection", ss) if isinstance(ss, dict) else getattr(ss, "selection", {})
                 srows = sel_data.get("rows", []) if isinstance(sel_data, dict) else getattr(sel_data, "rows", [])
                 scols = sel_data.get("columns", []) if isinstance(sel_data, dict) else getattr(sel_data, "columns", [])
                 if srows and len(srows) > 0:
@@ -335,36 +327,40 @@ with tab_main:
             except Exception:
                 pass
 
-            # ── Manual client selector (overrides cell selection) ──
+            # ── Cell info panel (ABOVE the table, below filters) ──
+            if sel_client and sel_crit_name and sel_reasoning:
+                st.markdown(
+                    f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
+                    f"<small>{sel_reasoning}</small></div>",
+                    unsafe_allow_html=True,
+                )
+
+            st.dataframe(styled, use_container_width=True, height=680,
+                on_select="rerun", selection_mode="single-cell", key="tl_table",
+                column_config=col_config)
+
+            # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
             manual_client = st.selectbox("🔍 Выберите клиента:", [""] + all_clients, key="client_sel")
             if manual_client:
                 sel_client = manual_client
 
-            # ── Criterion selector (when client is chosen) ──
+            # ── Criterion selector ──
             if sel_client:
                 crit_list = sorted(crit_cols.keys())
                 sel_crit_key = st.selectbox("📌 Критерий:", [""] + crit_list, key="crit_sel",
                     format_func=lambda x: crit_cols.get(x, ("", x))[1] if x else "")
                 if sel_crit_key:
                     sel_crit_name = crit_cols[sel_crit_key][1]
-                    if sel_client in details_map and sel_crit_name in details_map[sel_client]:
-                        sel_reasoning = details_map[sel_client][sel_crit_name]["reasoning"]
+                    sel_reasoning = details_map.get(sel_client, {}).get(sel_crit_name, {}).get("reasoning", "")
 
-            # ── Cell info panel (above table) ──
-            if sel_client:
-                if sel_crit_name and sel_reasoning:
-                    st.markdown(
-                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
-                        f"<small>{sel_reasoning}</small></div>",
-                        unsafe_allow_html=True,
-                    )
-                elif sel_crit_name and not sel_reasoning:
-                    st.markdown(
-                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
-                        f"<small>Нет детальных данных</small></div>",
-                        unsafe_allow_html=True,
-                    )
+            # ── Cell detail summary (ABOVE client details) ──
+            if sel_client and sel_crit_name and sel_reasoning:
+                st.markdown(
+                    f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
+                    f"<small>{sel_reasoning}</small></div>",
+                    unsafe_allow_html=True,
+                )
 
             # ── Client details below table ──
             if sel_client:
