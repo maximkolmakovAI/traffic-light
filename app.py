@@ -107,7 +107,6 @@ with left_col:
 
     with tab_upload_single:
         st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
-        st.stop()
         uploaded_file = st.file_uploader("Выберите Excel-файл отчета", type=["xls", "xlsx"], key="single_upload")
 
         if uploaded_file is not None:
@@ -164,7 +163,6 @@ with left_col:
 
     with tab_upload_folder:
         st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
-        st.stop()
         folder_path = st.text_input(
             "Путь к папке с отчетами",
             value=str(Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")),
