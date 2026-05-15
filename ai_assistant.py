@@ -1,10 +1,17 @@
 import json
+import os
 import requests
 from datetime import datetime
 from db.database import get_conn
 
 API_URL = "https://litellm.1bitai.ru/chat/completions"
-API_KEY = "sk-2dbPPD0-PWa-1GUgVfonjg"
+
+try:
+    import streamlit as st
+    API_KEY = st.secrets.get("AI_API_KEY", os.environ.get("AI_API_KEY", "sk-2dbPPD0-PWa-1GUgVfonjg"))
+except Exception:
+    API_KEY = os.environ.get("AI_API_KEY", "sk-2dbPPD0-PWa-1GUgVfonjg")
+
 MODEL = "ollama/qwen3.5:35b"
 MAX_SUMMARY_LINES = 100
 SESSION_TIMEOUT_MINUTES = 60

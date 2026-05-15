@@ -15,8 +15,8 @@ env/
 .env
 *.env
 
-# Streamlit
-.streamlit/
+# Streamlit user config (not project config)
+# Project .streamlit/config.toml IS tracked
 
 # Database
 data/*.db
