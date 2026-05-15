@@ -111,39 +111,31 @@ init_db()
 
 st.title("🚦 Светофор по клиентской базе")
 
-left_col, right_col = st.columns([3, 2])
+chat_col, left_col = st.columns([1, 5])
 
-with right_col:
-    st.subheader("💬 ИИ-ассистент")
-
+with chat_col:
+    st.subheader("💬 Чат")
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-
-    chat_container = st.container(height=280)
+    chat_container = st.container(height=200)
     with chat_container:
         if not st.session_state.chat_history:
-            st.caption("Спросите о данных: например, «сколько красных клиентов?» или «расскажи про клиента ЛТК»")
-
+            st.caption("Спросите о данных…")
         for msg in st.session_state.chat_history:
             role_class = "chat-user" if msg["role"] == "user" else "chat-ai"
             st.markdown(
-                f"""<div class="{role_class}" style="padding:0.5rem;margin:0.25rem 0;border-radius:0.5rem">
-                <small>{msg["content"][:300]}</small></div>""",
+                f"""<div class="{role_class}" style="padding:0.3rem;margin:0.15rem 0;border-radius:0.3rem">
+                <small>{msg["content"][:200]}</small></div>""",
                 unsafe_allow_html=True
             )
-
-    user_input = st.chat_input("Задайте вопрос о данных...", key="ai_chat_input")
-
+    user_input = st.chat_input("Вопрос…", key="ai_chat_input")
     if user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input, "timestamp": datetime.now().isoformat()})
-
-        with st.spinner("ИИ анализирует..."):
+        with st.spinner("ИИ…"):
             reply = ask_ai(user_input, st.session_state.chat_history)
-
         st.session_state.chat_history.append({"role": "assistant", "content": reply, "timestamp": datetime.now().isoformat()})
         st.rerun()
-
-    if st.session_state.chat_history and st.button("🗑️ Очистить диалог", use_container_width=True, key="clear_chat"):
+    if st.session_state.chat_history and st.button("🗑️", use_container_width=True, key="clear_chat"):
         st.session_state.chat_history = []
         st.rerun()
 
@@ -300,16 +292,16 @@ with left_col:
 
             df = load_traffic_data()
             if not df.empty:
-                filt1, filt2 = st.columns(2)
-                with filt1:
+                flt1, flt2, flt3 = st.columns([1, 1, 3])
+                with flt1:
                     managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
-                    selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter")
-                with filt2:
+                    selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter", label_visibility="collapsed")
+                with flt2:
                     color_opts = ["Все", "green", "yellow", "red"]
                     selected_color = st.selectbox(
                         "Зона", color_opts,
                         format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
-                        key="col_filter",
+                        key="col_filter", label_visibility="collapsed",
                     )
 
                 fdf = df.copy()
@@ -323,11 +315,11 @@ with left_col:
                                 "Крит", "Вспом"]
 
                 col_help = {
-                    "Соб.1р/кв": "Событие 1 раз в квартал: есть завершённое/перенесённое событие хотя бы в 1 из 3 месяцев (критичный)",
-                    "Жалобы": "Отсутствие жалоб за 3 мес: клиент не должен быть в списке жалоб (вспомогательный)",
+                    "Соб.1р/кв": "Событие 1 раз в квартал (критичный)",
+                    "Жалобы": "Отсутствие жалоб за 3 мес (вспомогательный)",
                     "Наряды": "Отсутствие нарядов 'отклонён клиентом' (вспомогательный)",
-                    "Соб.2мес": "Событие за 2 мес до окончания договора (только для договоров за 30-90 дней до конца, критичный)",
-                    "Счет": "Счёт на продление за 2 мес до окончания (только для договоров за 30-90 дней до конца, критичный)",
+                    "Соб.2мес": "Событие за 2 мес до окончания (критичный, только 30-90 дней)",
+                    "Счет": "Счёт на продление за 2 мес до окончания (критичный, только 30-90 дней)",
                     "Неп.док": "Отсутствие неподписанных документов (вспомогательный)",
                     "Крит": "Количество критических нарушений",
                     "Вспом": "Количество вспомогательных нарушений",
@@ -344,7 +336,7 @@ with left_col:
                 selection = st.dataframe(
                     styled,
                     use_container_width=True,
-                    height=500,
+                    height=680,
                     on_select="rerun",
                     selection_mode="single-row",
                     key="tl_table",
@@ -371,7 +363,7 @@ with left_col:
 
                 selected_client = sel_client
                 if selected_client:
-                    st.markdown(f"**🔍 Детализация: {selected_client}**")
+                    st.markdown(f"**🔍 {selected_client}**")
                     details = get_details_for_client(selected_client)
                     if details:
                         det_cols = st.columns(3)
@@ -385,7 +377,7 @@ with left_col:
                             )
 
                 csv = fdf.to_csv(index=False).encode("utf-8-sig")
-                st.download_button("⬇️ Скачать CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
+                st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
 
                 st.divider()
                 pie_fig = px.pie(
@@ -393,7 +385,8 @@ with left_col:
                     values=[counts.get("green", 0), counts.get("yellow", 0), counts.get("red", 0)],
                     color=["Зеленый", "Желтый", "Красный"],
                     color_discrete_map={"Зеленый": "#2ecc71", "Желтый": "#f1c40f", "Красный": "#e74c3c"},
-                    title="Распределение клиентов",
+                    title="Распределение",
+                    height=300,
                 )
                 pie_fig.update_traces(textinfo="label+percent+value")
                 st.plotly_chart(pie_fig, use_container_width=True)
