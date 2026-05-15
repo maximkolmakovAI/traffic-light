@@ -317,7 +317,7 @@ with tab_main:
                     styled = styled.format({col: lambda v: v[:55] if len(str(v)) > 55 else v}, subset=[col])
 
             col_config = {"Клиент": st.column_config.TextColumn(width="medium")}
-            for k, v in col_help:
+            for k, v in col_help.items():
                 col_config[k] = st.column_config.Column(help=v, width="small")
 
             selection = st.dataframe(styled, use_container_width=True, height=680,
