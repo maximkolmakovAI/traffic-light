@@ -255,14 +255,14 @@ with tab_main:
                 seed_demo_data()
         with st.spinner("Расчет светофора…"):
             calculate_traffic_light()
-        st.session_state["_refresh_data"] = True
+        st.session_state["_refresh"] = True
         st.success("Готово!")
         st.rerun()
 
     if col2.button("📊 Пересчитать светофор", use_container_width=True):
         with st.spinner("Расчет…"):
             calculate_traffic_light()
-        st.session_state["_refresh_data"] = True
+        st.session_state["_refresh"] = True
         st.success("Готово!")
         st.rerun()
 
@@ -272,25 +272,22 @@ with tab_main:
         mb.metric("🟡 Желтые", counts.get("yellow", 0), border=True)
         mc.metric("🔴 Красные", counts.get("red", 0), border=True)
 
-        # cache data in session_state so cell clicks dont reload DB
-        if "_cached_df" not in st.session_state or st.session_state.pop("_refresh_data", False):
-            st.session_state["_cached_df"], st.session_state["_cached_crit"], st.session_state["_cached_dm"] = load_traffic_data()
-        df, crit_cols, details_map = st.session_state["_cached_df"], st.session_state["_cached_crit"], st.session_state["_cached_dm"]
-
-        sel_client = st.session_state.get("_selected_client", "")
-        sel_cell_criterion = st.session_state.get("_cell_criterion", "")
-        sel_cell_reasoning = st.session_state.get("_cell_reasoning", "")
+        # cache ALL data in session — refreshes only after ETL/recalc
+        if "_cache" not in st.session_state or st.session_state.pop("_refresh", False):
+            cdf, ccrit, cdm = load_traffic_data()
+            st.session_state["_cache"] = (cdf, ccrit, cdm)
+        df, crit_cols, details_map = st.session_state["_cache"]
 
         if not df.empty:
-            flt1, flt2, flt3 = st.columns([1, 1, 2])
+            flt1, flt2 = st.columns([1, 1])
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
-                selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter", label_visibility="collapsed")
+                selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
                 color_opts = ["Все", "green", "yellow", "red"]
                 selected_color = st.selectbox("Зона", color_opts,
                     format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
-                    key="col_filter", label_visibility="collapsed")
+                    key="col_f", label_visibility="collapsed")
 
             fdf = df.copy()
             if selected_manager != "Все":
@@ -301,80 +298,69 @@ with tab_main:
             display_cols = ["Клиент", "Менеджер", "Окончание",
                             "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
                             "Крит", "Вспом"]
-            col_help = {k: v for k, v in [
-                ("Соб.1р/кв", "Событие 1 раз в квартал (критичный)"),
-                ("Жалобы", "Отсутствие жалоб за 3 мес (вспомогательный)"),
-                ("Наряды", "Отсутствие нарядов (вспомогательный)"),
-                ("Соб.2мес", "Событие за 2 мес до окончания (критичный)"),
-                ("Счет", "Счёт на продление за 2 мес (критичный)"),
-                ("Неп.док", "Неподписанные документы (вспомогательный)"),
-                ("Крит", "Критические нарушения"),
-                ("Вспом", "Вспомогательные нарушения"),
-            ]}
 
             styled = fdf[display_cols].style.apply(lambda row: render_color_row_2(row, fdf), axis=1)
-            for col in ["Соб.1р/кв", "Жалобы", "Наряды", "Неп.док"]:
-                if col in fdf.columns:
-                    styled = styled.format({col: lambda v: v[:55] if len(str(v)) > 55 else v}, subset=[col])
 
             col_config = {"Клиент": st.column_config.TextColumn(width="medium")}
-            for k, v in col_help.items():
+            for k, v in {"Соб.1р/кв":"Событие 1 раз в квартал (критичный)","Жалобы":"Отсутствие жалоб за 3 мес (вспом)","Наряды":"Отсутствие нарядов (вспом)","Соб.2мес":"Событие за 2 мес до окончания (критичный)","Счет":"Счёт на продление за 2 мес (критичный)","Неп.док":"Неподписанные документы (вспом)","Крит":"Критические нарушения","Вспом":"Вспомогательные нарушения"}.items():
                 col_config[k] = st.column_config.Column(help=v, width="small")
 
-            selection = st.dataframe(styled, use_container_width=True, height=680,
+            # dataframe with on_select — selection stored in st.session_state["tl_table"]
+            st.dataframe(styled, use_container_width=True, height=680,
                 on_select="rerun", selection_mode="single-cell", key="tl_table",
                 column_config=col_config)
 
-            # ── Extract selection info ──
+            # ── Read selection from session state (populated BEFORE rerun) ──
+            sel_client = ""
+            sel_crit_name = ""
             try:
-                sel = selection if isinstance(selection, dict) else {}
-                sel = sel.get("selection", selection) if isinstance(sel, dict) else getattr(selection, "selection", {})
-                srows = sel.get("rows", []) if isinstance(sel, dict) else getattr(sel, "rows", [])
-                scols = sel.get("columns", []) if isinstance(sel, dict) else getattr(sel, "columns", [])
+                ss = st.session_state.get("tl_table", {})
+                if isinstance(ss, dict):
+                    sel_data = ss.get("selection", ss)
+                else:
+                    sel_data = getattr(ss, "selection", {})
+                srows = sel_data.get("rows", []) if isinstance(sel_data, dict) else getattr(sel_data, "rows", [])
+                scols = sel_data.get("columns", []) if isinstance(sel_data, dict) else getattr(sel_data, "columns", [])
+                if srows and len(srows) > 0:
+                    ri = srows[0]
+                    if 0 <= ri < len(fdf):
+                        sel_client = fdf.iloc[ri]["Клиент"]
+                        if scols and len(scols) > 0:
+                            col_name = scols[0]
+                            if col_name in crit_cols:
+                                sel_crit_name = crit_cols[col_name][1]
             except Exception:
-                srows, scols = [], []
+                pass
 
-            if srows and len(srows) > 0:
-                ri = srows[0]
-                if 0 <= ri < len(fdf):
-                    sel_client = fdf.iloc[ri]["Клиент"]
-                    st.session_state["_selected_client"] = sel_client
-                    if scols and len(scols) > 0:
-                        col_name = scols[0]
-                        if col_name in crit_cols:
-                            _, cname_full = crit_cols[col_name]
-                            sel_cell_criterion = cname_full
-                            st.session_state["_cell_criterion"] = cname_full
-                            if sel_client in details_map and cname_full in details_map[sel_client]:
-                                sel_cell_reasoning = details_map[sel_client][cname_full]["reasoning"]
-                                st.session_state["_cell_reasoning"] = sel_cell_reasoning
-                            else:
-                                st.session_state["_cell_reasoning"] = ""
-
-            # ── Manual client selector ──
+            # ── Manual client selector (overrides cell selection) ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
-            manual_client = st.selectbox("🔍 Выберите клиента для детализации",
-                                         [""] + all_clients, key="manual_client_select")
-            if manual_client and manual_client != sel_client:
+            manual_client = st.selectbox("🔍 Выберите клиента:", [""] + all_clients, key="client_sel")
+            if manual_client:
                 sel_client = manual_client
-                st.session_state["_selected_client"] = manual_client
-                sel_cell_criterion = ""
-                st.session_state["_cell_criterion"] = ""
-                sel_cell_reasoning = ""
-                st.session_state["_cell_reasoning"] = ""
+
+            # ── Criterion selector (when client is chosen) ──
+            sel_reasoning = ""
+            if sel_client:
+                crit_list = sorted(crit_cols.keys())
+                sel_crit_key = st.selectbox("📌 Критерий:", [""] + crit_list, key="crit_sel",
+                    format_func=lambda x: crit_cols.get(x, ("", x))[1] if x else "")
+                if sel_crit_key:
+                    sel_crit_name = crit_cols[sel_crit_key][1]
+                    if sel_client in details_map and sel_crit_name in details_map[sel_client]:
+                        sel_reasoning = details_map[sel_client][sel_crit_name]["reasoning"]
 
             # ── Cell info panel (above table) ──
             if sel_client:
-                if sel_cell_criterion and sel_cell_reasoning:
+                if sel_crit_name and sel_reasoning:
                     st.markdown(
-                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_cell_criterion}</b><br>"
-                        f"<small>{sel_cell_reasoning}</small></div>",
+                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
+                        f"<small>{sel_reasoning}</small></div>",
                         unsafe_allow_html=True,
                     )
-                else:
+                elif sel_crit_name and not sel_reasoning:
                     st.markdown(
-                        f"<div class='cell-info'><b>🔍 {sel_client}</b>"
-                        f" — выберите ячейку критерия в таблице для просмотра расчёта</div>",
+                        f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
+                        f"<small>Нет детальных данных</small></div>",
                         unsafe_allow_html=True,
                     )
 
