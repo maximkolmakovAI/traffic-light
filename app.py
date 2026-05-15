@@ -15,7 +15,6 @@ from ai_assistant import ask_ai
 st.set_page_config(page_title="Светофор по клиентам", page_icon="🚦", layout="wide")
 
 COLOR_LABEL = {"green": "Зеленый", "yellow": "Желтый", "red": "Красный"}
-COLOR_HEX = {"green": "#2ecc71", "yellow": "#f1c40f", "red": "#e74c3c"}
 COLOR_SUBTLE = {"green": "#d4edda", "yellow": "#fff3cd", "red": "#f8d7da"}
 
 st.markdown("""
@@ -23,19 +22,11 @@ st.markdown("""
     .color-green { background-color: #d4edda; }
     .color-yellow { background-color: #fff3cd; }
     .color-red { background-color: #f8d7da; }
-    .chat-msg { padding: 0.5rem; margin: 0.25rem 0; border-radius: 0.5rem; }
-    .chat-user { background-color: #e3f2fd; }
-    .chat-ai { background-color: #f5f5f5; }
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-        gap: 0.25rem;
-    }
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] { gap: 0.15rem; }
+    [data-testid="stDataFrame"] { width: 100% !important; }
     .stMainBlock { padding-top: 0; }
-    [data-testid="column"]:first-child [data-testid="stVerticalBlock"] {
-        gap: 0.15rem;
-    }
-    [data-testid="stDataFrame"] {
-        width: 100% !important;
-    }
+    .chat-user { background-color: #e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
+    .chat-ai { background-color: #f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -84,24 +75,17 @@ def load_traffic_data():
             if cname in details_map and cname_full in details_map[cname]:
                 tip = details_map[cname][cname_full]["reasoning"]
             icon = "✅" if status == 1 else "❌"
-            short = tip[:60].replace(";", ",") if tip else ""
-            if status == 0 and short and short.startswith("Есть"):
-                short = short[:50]
+            short = tip[:55].replace(";", ",") if tip else ""
             r[label] = f"{icon} {short}".strip() if status == 0 else icon
         rows.append(r)
 
     result = pd.DataFrame(rows)
     result["_color"] = df["Цвет"].values
-    return result
+    return result, crit_cols, details_map
 
-
-def render_color_row(row):
-    color = row.get("Цвет", "green")
-    bg = COLOR_SUBTLE.get(color, "#ffffff")
-    return [f"background-color: {bg}"] * len(row)
 
 def render_color_row_2(row, fdf):
-    idx = row.name
+    idx = row.name if hasattr(row, "name") else 0
     color = fdf.iloc[idx]["_color"] if idx in fdf.index else "green"
     bg = COLOR_SUBTLE.get(color, "#ffffff")
     return [f"background-color: {bg}"] * len(row)
@@ -111,291 +95,255 @@ init_db()
 
 st.title("🚦 Светофор по клиентской базе")
 
-chat_col, left_col = st.columns([1, 5])
-
-with chat_col:
-    st.subheader("💬 Чат")
+with st.popover("💬 Чат с ИИ", use_container_width=True):
+    st.caption("Спрашивайте о клиентах, критериях и результатах")
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-    chat_container = st.container(height=200)
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.caption("Спросите о данных…")
-        for msg in st.session_state.chat_history:
-            role_class = "chat-user" if msg["role"] == "user" else "chat-ai"
-            st.markdown(
-                f"""<div class="{role_class}" style="padding:0.3rem;margin:0.15rem 0;border-radius:0.3rem">
-                <small>{msg["content"][:200]}</small></div>""",
-                unsafe_allow_html=True
-            )
-    user_input = st.chat_input("Вопрос…", key="ai_chat_input")
+    for msg in st.session_state.chat_history[-6:]:
+        icon = "🙋" if msg["role"] == "user" else "🤖"
+        st.markdown(f"<div class='chat-{msg['role']}'><small>{icon} {msg['content'][:300]}</small></div>",
+                    unsafe_allow_html=True)
+    user_input = st.chat_input("Задайте вопрос о данных…", key="ai_chat_popover")
     if user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input, "timestamp": datetime.now().isoformat()})
-        with st.spinner("ИИ…"):
+        with st.spinner("ИИ анализирует…"):
             reply = ask_ai(user_input, st.session_state.chat_history)
         st.session_state.chat_history.append({"role": "assistant", "content": reply, "timestamp": datetime.now().isoformat()})
         st.rerun()
-    if st.session_state.chat_history and st.button("🗑️", use_container_width=True, key="clear_chat"):
-        st.session_state.chat_history = []
-        st.rerun()
 
-with left_col:
-    tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
-        "📊 Светофор", "📂 Загрузить файл", "📁 Загрузить папку", "ℹ️ Описание"
-    ])
+tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
+    "📊 Светофор", "📂 Загрузить файл", "📁 Загрузить папку", "ℹ️ Описание"
+])
 
-    with tab_upload_single:
-        st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
-        uploaded_file = st.file_uploader("Выберите Excel-файл отчета", type=["xls", "xlsx"], key="single_upload")
-
-        if uploaded_file is not None:
-            file_bytes = uploaded_file.read()
-            buf = io.BytesIO(file_bytes)
-
-            from etl.file_detector import detect_file_type
-            detection = detect_file_type(uploaded_file.name, buf)
-
-            if detection["file_type"] == "unknown":
-                st.error(f"Не удалось определить тип файла: {uploaded_file.name}")
-            else:
-                st.info(f"**Определен тип:** {detection['label']}")
-
-                batch_id = int(datetime.now().timestamp())
-                state_key = f"conflict_{uploaded_file.name}"
-
-                if st.session_state.get(state_key) != "resolved":
-                    conflicts = check_conflicts(detection["file_type"], detection["period"])
-                    if conflicts:
-                        st.warning("Обнаружены конфликты: данные уже существуют в базе")
-                        for c in conflicts:
-                            st.write(f"- {c['message']}")
-
-                        col_a, col_b, col_c = st.columns(3)
-                        if col_a.button("🔄 Перезаписать", key=f"rep_{uploaded_file.name}", use_container_width=True):
-                            buf.seek(0)
-                            result = load_file_by_buffer(buf, uploaded_file.name, batch_id, resolution="replace")
-                            if result["success"]:
-                                resolve_conflicts(detection["file_type"], detection["period"], "replace", batch_id)
-                                st.success(f"Загружено {result['loaded']} записей!")
-                                st.session_state[state_key] = "resolved"
-                                st.rerun()
-                            else:
-                                st.error(f"Ошибка: {result.get('error','')}")
-
-                        if col_b.button("⏭️ Пропустить", key=f"skip_{uploaded_file.name}", use_container_width=True):
-                            st.info("Загрузка пропущена")
-                            st.session_state[state_key] = "resolved"
-                            st.rerun()
-
-                        if col_c.button("❌ Отменить", key=f"can_{uploaded_file.name}", use_container_width=True):
-                            st.session_state[state_key] = "cancelled"
-                            st.rerun()
-                    else:
+with tab_upload_single:
+    st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
+    uploaded_file = st.file_uploader("Выберите Excel-файл отчета", type=["xls", "xlsx"], key="single_upload")
+    if uploaded_file is not None:
+        file_bytes = uploaded_file.read()
+        buf = io.BytesIO(file_bytes)
+        from etl.file_detector import detect_file_type
+        detection = detect_file_type(uploaded_file.name, buf)
+        if detection["file_type"] == "unknown":
+            st.error(f"Не удалось определить тип файла: {uploaded_file.name}")
+        else:
+            st.info(f"**Определен тип:** {detection['label']}")
+            batch_id = int(datetime.now().timestamp())
+            state_key = f"conflict_{uploaded_file.name}"
+            if st.session_state.get(state_key) != "resolved":
+                conflicts = check_conflicts(detection["file_type"], detection["period"])
+                if conflicts:
+                    st.warning("Обнаружены конфликты")
+                    for c in conflicts:
+                        st.write(f"- {c['message']}")
+                    col_a, col_b, col_c = st.columns(3)
+                    if col_a.button("🔄 Перезаписать", key=f"rep_{uploaded_file.name}", use_container_width=True):
                         buf.seek(0)
-                        with st.spinner("Загрузка..."):
-                            result = load_file_by_buffer(buf, uploaded_file.name, batch_id)
+                        result = load_file_by_buffer(buf, uploaded_file.name, batch_id, resolution="replace")
                         if result["success"]:
-                            st.success(f"✅ Загружено {result['loaded']} записей!")
+                            resolve_conflicts(detection["file_type"], detection["period"], "replace", batch_id)
+                            st.success(f"Загружено {result['loaded']} записей!")
                             st.session_state[state_key] = "resolved"
+                            st.rerun()
                         else:
                             st.error(f"Ошибка: {result.get('error','')}")
+                    if col_b.button("⏭️ Пропустить", key=f"skip_{uploaded_file.name}", use_container_width=True):
+                        st.session_state[state_key] = "resolved"
+                        st.rerun()
+                    if col_c.button("❌ Отменить", key=f"can_{uploaded_file.name}", use_container_width=True):
+                        st.session_state[state_key] = "cancelled"
+                        st.rerun()
+                else:
+                    buf.seek(0)
+                    with st.spinner("Загрузка…"):
+                        result = load_file_by_buffer(buf, uploaded_file.name, batch_id)
+                    if result["success"]:
+                        st.success(f"✅ Загружено {result['loaded']} записей!")
+                        st.session_state[state_key] = "resolved"
+                    else:
+                        st.error(f"Ошибка: {result.get('error','')}")
 
-    with tab_upload_folder:
-        st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
-        folder_path = st.text_input(
-            "Путь к папке с отчетами",
-            value=str(Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")),
-            key="folder_path_input",
-        )
+with tab_upload_folder:
+    st.info("⚠️ **Недоступно в тестовой версии.** Будет добавлено в следующих релизах.")
+    folder_path = st.text_input("Путь к папке с отчетами",
+        value=str(Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")),
+        key="folder_path_input")
+    if st.button("📂 Загрузить все файлы из папки", use_container_width=True):
+        folder = Path(folder_path)
+        if not folder.exists():
+            st.error(f"Папка не найдена: {folder_path}")
+        else:
+            batch_id = int(datetime.now().timestamp())
+            results, errors = [], []
+            progress = st.progress(0, text="Загрузка файлов…")
+            files = []
+            for ext in ["*.xls", "*.xlsx", "*.XLS", "*.XLSX"]:
+                files.extend(sorted(folder.glob(ext)))
+            for i, filepath in enumerate(files):
+                progress.progress((i + 1) / len(files), text=f"Обработка: {filepath.name}")
+                result = load_file_by_path(filepath, batch_id, resolution="replace")
+                results.append(result)
+                if not result["success"]:
+                    errors.append(f"{filepath.name}: {result.get('error','')}")
+            progress.empty()
+            total = sum(r.get("loaded", 0) for r in results if r.get("success"))
+            sc = sum(1 for r in results if r.get("success"))
+            st.success(f"✅ Загружено {sc}/{len(files)} файлов, {total} записей")
+            if errors:
+                with st.expander("Ошибки"):
+                    for e in errors:
+                        st.write(f"- {e}")
+            if sc > 0 and st.button("📊 Рассчитать светофор", use_container_width=True):
+                with st.spinner("Расчет…"):
+                    calculate_traffic_light()
+                st.success("Готово!")
+                st.rerun()
 
-        if st.button("📂 Загрузить все файлы из папки", use_container_width=True):
-            folder = Path(folder_path)
-            if not folder.exists():
-                st.error(f"Папка не найдена: {folder_path}")
+with tab_main:
+    conn = get_conn()
+    counts_data = conn.execute(
+        "SELECT final_color, COUNT(*) as cnt FROM traffic_light_results GROUP BY final_color"
+    ).fetchall()
+    conn.close()
+
+    counts = {"green": 0, "yellow": 0, "red": 0}
+    for r in counts_data:
+        counts[r["final_color"]] = r["cnt"]
+    total = sum(counts.values())
+
+    col1, col2 = st.columns(2)
+    if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
+        with st.spinner("Загрузка данных…"):
+            try:
+                run_all_etl(clear_first=True)
+                st.success("Данные из файлов загружены!")
+            except Exception:
+                st.info("Исходные файлы не найдены. Загружаю демо-данные для тестирования.")
+                seed_demo_data()
+        with st.spinner("Расчет светофора…"):
+            calculate_traffic_light()
+        st.success("Готово!")
+        st.rerun()
+
+    if col2.button("📊 Пересчитать светофор", use_container_width=True):
+        with st.spinner("Расчет…"):
+            calculate_traffic_light()
+        st.success("Готово!")
+        st.rerun()
+
+    if total > 0:
+        mc1, mc2 = st.columns([1, 1])
+        with mc1:
+            mc1a, mc1b, mc1c = st.columns(3)
+            mc1a.metric("🟢 Зеленые", counts.get("green", 0),
+                        f"{counts.get('green',0)/total*100:.0f}%" if total else "0%", border=True)
+            mc1b.metric("🟡 Желтые", counts.get("yellow", 0),
+                        f"{counts.get('yellow',0)/total*100:.0f}%" if total else "0%", border=True)
+            mc1c.metric("🔴 Красные", counts.get("red", 0),
+                        f"{counts.get('red',0)/total*100:.0f}%" if total else "0%", border=True)
+
+        df, crit_cols, details_map = load_traffic_data()
+        if not df.empty:
+            flt1, flt2 = st.columns([1, 1])
+            with flt1:
+                managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
+                selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter", label_visibility="collapsed")
+            with flt2:
+                color_opts = ["Все", "green", "yellow", "red"]
+                selected_color = st.selectbox("Зона", color_opts,
+                    format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
+                    key="col_filter", label_visibility="collapsed")
+
+            fdf = df.copy()
+            if selected_manager != "Все":
+                fdf = fdf[fdf["Менеджер"] == selected_manager]
+            if selected_color != "Все":
+                fdf = fdf[fdf["_color"] == selected_color]
+
+            display_cols = ["Клиент", "Менеджер", "Окончание",
+                            "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
+                            "Крит", "Вспом"]
+
+            col_help = {
+                "Соб.1р/кв": "Событие 1 раз в квартал (критичный)",
+                "Жалобы": "Отсутствие жалоб за 3 мес (вспомогательный)",
+                "Наряды": "Отсутствие нарядов (вспомогательный)",
+                "Соб.2мес": "Событие за 2 мес до окончания (критичный)",
+                "Счет": "Счёт на продление за 2 мес (критичный)",
+                "Неп.док": "Неподписанные документы (вспомогательный)",
+                "Крит": "Критические нарушения",
+                "Вспом": "Вспомогательные нарушения",
+            }
+
+            styled = fdf[display_cols].style.apply(lambda row: render_color_row_2(row, fdf), axis=1)
+            for col in ["Соб.1р/кв", "Жалобы", "Наряды", "Неп.док"]:
+                if col in fdf.columns:
+                    styled = styled.format({col: lambda v: v[:55] if len(str(v)) > 55 else v}, subset=[col])
+
+            col_config = {"Клиент": st.column_config.TextColumn(width="medium")}
+            for k, v in col_help.items():
+                col_config[k] = st.column_config.Column(help=v, width="small")
+
+            selection = st.dataframe(styled, use_container_width=True, height=680,
+                on_select="rerun", selection_mode="single-cell", key="tl_table",
+                column_config=col_config)
+
+            sel_client = None
+            sel_crit_display = None
+            sel_crit_full = None
+            try:
+                sel_rows = selection.selection.rows
+                sel_cols = selection.selection.columns
+                if sel_rows and len(sel_rows) > 0:
+                    ri = sel_rows[0]
+                    if 0 <= ri < len(fdf):
+                        sel_client = fdf.iloc[ri]["Клиент"]
+                        if sel_cols and len(sel_cols) > 0:
+                            col_name = sel_cols[0]
+                            if col_name in crit_cols:
+                                _, cname_full = crit_cols[col_name]
+                                sel_crit_display = col_name
+                                sel_crit_full = cname_full
+            except (AttributeError, IndexError, TypeError):
+                pass
+
+            if sel_client is None:
+                sel_client = st.session_state.get("_selected_client", None)
             else:
-                batch_id = int(datetime.now().timestamp())
-                results = []
-                errors = []
+                st.session_state["_selected_client"] = sel_client
 
-                progress = st.progress(0, text="Загрузка файлов...")
-                files = []
-                for ext in ["*.xls", "*.xlsx"]:
-                    files.extend(sorted(folder.glob(ext)))
-                for ext in ["*.XLS", "*.XLSX"]:
-                    files.extend(sorted(folder.glob(ext)))
+            selected_client = sel_client
 
-                for i, filepath in enumerate(files):
-                    progress.progress((i + 1) / len(files), text=f"Обработка: {filepath.name}")
-                    result = load_file_by_path(filepath, batch_id, resolution="replace")
-                    results.append(result)
-                    if not result["success"]:
-                        errors.append(f"{filepath.name}: {result.get('error','')}")
-
-                progress.empty()
-                total = sum(r.get("loaded", 0) for r in results if r.get("success"))
-                success_cnt = sum(1 for r in results if r.get("success"))
-                st.success(f"✅ Загружено {success_cnt}/{len(files)} файлов, всего {total} записей")
-
-                if errors:
-                    with st.expander("Ошибки"):
-                        for e in errors:
-                            st.write(f"- {e}")
-
-                if success_cnt > 0 and st.button("📊 Рассчитать светофор", use_container_width=True):
-                    with st.spinner("Расчет..."):
-                        calculate_traffic_light()
-                    st.success("Светофор пересчитан!")
-                    st.rerun()
-
-    with tab_main:
-        conn = get_conn()
-        counts_data = conn.execute(
-            "SELECT final_color, COUNT(*) as cnt FROM traffic_light_results GROUP BY final_color"
-        ).fetchall()
-        conn.close()
-
-        counts = {"green": 0, "yellow": 0, "red": 0}
-        for r in counts_data:
-            counts[r["final_color"]] = r["cnt"]
-        total = sum(counts.values())
-
-        col1, col2 = st.columns(2)
-        if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
-            with st.spinner("Загрузка данных из исходных файлов..."):
-                try:
-                    run_all_etl(clear_first=True)
-                    st.success("Данные из файлов загружены!")
-                except (FileNotFoundError, Exception) as e:
-                    st.info("Исходные файлы не найдены. Загружаю демо-данные для тестирования.")
-                    seed_demo_data()
-            with st.spinner("Расчет светофора..."):
-                calculate_traffic_light()
-            st.success("Готово!")
-            st.rerun()
-
-        if col2.button("📊 Пересчитать светофор", use_container_width=True):
-            with st.spinner("Расчет..."):
-                calculate_traffic_light()
-            st.success("Готово!")
-            st.rerun()
-
-        if total > 0:
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("🟢 Зеленая зона", counts.get("green", 0),
-                       f"{counts.get('green',0)/total*100:.0f}%" if total else "0%", border=True)
-            mc2.metric("🟡 Желтая зона", counts.get("yellow", 0),
-                       f"{counts.get('yellow',0)/total*100:.0f}%" if total else "0%", border=True)
-            mc3.metric("🔴 Красная зона", counts.get("red", 0),
-                       f"{counts.get('red',0)/total*100:.0f}%" if total else "0%", border=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            df = load_traffic_data()
-            if not df.empty:
-                flt1, flt2, flt3 = st.columns([1, 1, 3])
-                with flt1:
-                    managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
-                    selected_manager = st.selectbox("Менеджер", managers, key="mgr_filter", label_visibility="collapsed")
-                with flt2:
-                    color_opts = ["Все", "green", "yellow", "red"]
-                    selected_color = st.selectbox(
-                        "Зона", color_opts,
-                        format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
-                        key="col_filter", label_visibility="collapsed",
+            st.markdown(f"**🔍 Детализация: {selected_client}**")
+            details = get_details_for_client(selected_client) if selected_client else []
+            if details:
+                for d in details:
+                    icon = "✅" if d["status"] else "❌"
+                    color = "#2ecc71" if d["status"] else "#e74c3c"
+                    st.markdown(
+                        f"<span style='color:{color}'><b>{icon} {d['criterion_name']}</b></span>  \n"
+                        f"<small>{d['reasoning'][:200]}</small>",
+                        unsafe_allow_html=True,
                     )
 
-                fdf = df.copy()
-                if selected_manager != "Все":
-                    fdf = fdf[fdf["Менеджер"] == selected_manager]
-                if selected_color != "Все":
-                    fdf = fdf[fdf["_color"] == selected_color]
+            csv = fdf.to_csv(index=False).encode("utf-8-sig")
+            st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
 
-                display_cols = ["Клиент", "Менеджер", "Окончание",
-                                "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
-                                "Крит", "Вспом"]
+            st.divider()
+            pie_fig = px.pie(
+                names=["Зеленый", "Желтый", "Красный"],
+                values=[counts.get("green", 0), counts.get("yellow", 0), counts.get("red", 0)],
+                color=["Зеленый", "Желтый", "Красный"],
+                color_discrete_map={"Зеленый": "#2ecc71", "Желтый": "#f1c40f", "Красный": "#e74c3c"},
+                title="Распределение", height=300,
+            )
+            pie_fig.update_traces(textinfo="label+percent+value")
+            st.plotly_chart(pie_fig, use_container_width=True)
+    else:
+        st.info("Данные не загружены. Используйте вкладки загрузки.")
 
-                col_help = {
-                    "Соб.1р/кв": "Событие 1 раз в квартал (критичный)",
-                    "Жалобы": "Отсутствие жалоб за 3 мес (вспомогательный)",
-                    "Наряды": "Отсутствие нарядов 'отклонён клиентом' (вспомогательный)",
-                    "Соб.2мес": "Событие за 2 мес до окончания (критичный, только 30-90 дней)",
-                    "Счет": "Счёт на продление за 2 мес до окончания (критичный, только 30-90 дней)",
-                    "Неп.док": "Отсутствие неподписанных документов (вспомогательный)",
-                    "Крит": "Количество критических нарушений",
-                    "Вспом": "Количество вспомогательных нарушений",
-                }
-
-                styled = fdf[display_cols].style.apply(
-                    lambda row: render_color_row_2(row, fdf), axis=1
-                )
-
-                for col in ["Соб.1р/кв", "Жалобы", "Наряды", "Неп.док"]:
-                    if col in fdf.columns:
-                        styled = styled.format({col: lambda v, col=col: v[:55] if len(str(v)) > 55 else v}, subset=[col])
-
-                selection = st.dataframe(
-                    styled,
-                    use_container_width=True,
-                    height=680,
-                    on_select="rerun",
-                    selection_mode="single-row",
-                    key="tl_table",
-                    column_config={
-                        "Клиент": st.column_config.TextColumn(width="medium"),
-                        **{k: st.column_config.Column(help=v, width="small") for k, v in col_help.items()},
-                    },
-                )
-
-                sel_client = None
-                try:
-                    sel_rows = selection.selection.rows
-                    if sel_rows:
-                        row_idx = sel_rows[0]
-                        if 0 <= row_idx < len(fdf):
-                            sel_client = fdf.iloc[row_idx]["Клиент"]
-                except (AttributeError, IndexError, TypeError):
-                    pass
-
-                if sel_client is None:
-                    sel_client = st.session_state.get("_selected_client", None)
-                else:
-                    st.session_state["_selected_client"] = sel_client
-
-                selected_client = sel_client
-                if selected_client:
-                    st.markdown(f"**🔍 {selected_client}**")
-                    details = get_details_for_client(selected_client)
-                    if details:
-                        det_cols = st.columns(3)
-                        for i, d in enumerate(details):
-                            icon = "✅" if d["status"] else "❌"
-                            color = "#2ecc71" if d["status"] else "#e74c3c"
-                            det_cols[i % 3].markdown(
-                                f"<span style='color:{color}'><b>{icon} {d['criterion_name']}</b></span>  \n"
-                                f"<small>{d['reasoning'][:150]}</small>",
-                                unsafe_allow_html=True,
-                            )
-
-                csv = fdf.to_csv(index=False).encode("utf-8-sig")
-                st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
-
-                st.divider()
-                pie_fig = px.pie(
-                    names=["Зеленый", "Желтый", "Красный"],
-                    values=[counts.get("green", 0), counts.get("yellow", 0), counts.get("red", 0)],
-                    color=["Зеленый", "Желтый", "Красный"],
-                    color_discrete_map={"Зеленый": "#2ecc71", "Желтый": "#f1c40f", "Красный": "#e74c3c"},
-                    title="Распределение",
-                    height=300,
-                )
-                pie_fig.update_traces(textinfo="label+percent+value")
-                st.plotly_chart(pie_fig, use_container_width=True)
-        else:
-            st.info("Данные не загружены. Используйте вкладки загрузки.")
-
-    with tab_info:
-        st.subheader("Критерии")
-        st.markdown("""
+with tab_info:
+    st.subheader("Критерии")
+    st.markdown("""
 | Критерий | Тип | Описание |
 |----------|-----|----------|
 | **Событие 1 раз в квартал** | 🔴 Критичный | Есть завершенное/перенесенное событие в любом из 3 месяцев |
@@ -404,10 +352,10 @@ with left_col:
 | **Отсутствие жалоб за 3 мес** | 🟡 Вспомогательный | Клиента нет в списке жалоб |
 | **Отсутствие нарядов (отклонен)** | 🟡 Вспомогательный | Нет нарядов со статусом "Отклонен клиентом" |
 | **Отсутствие неподписанных док-тов** | 🟡 Вспомогательный | Все документы подписаны или сданы в расчетный отдел |
-        """)
-        st.subheader("Правила")
-        st.markdown("""
+    """)
+    st.subheader("Правила")
+    st.markdown("""
 - 🟢 **Зеленый**: 0 критичных, < 2 вспомогательных
 - 🟡 **Желтый**: 1+ критичных ИЛИ 2+ вспомогательных
 - 🔴 **Красный**: 1+ критичных + 2+ вспомогательных ИЛИ 3+ вспомогательных
-        """)
+    """)
