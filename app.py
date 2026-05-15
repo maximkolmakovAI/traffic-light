@@ -29,6 +29,13 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
         gap: 0.25rem;
     }
+    .stMainBlock { padding-top: 0; }
+    [data-testid="column"]:first-child [data-testid="stVerticalBlock"] {
+        gap: 0.15rem;
+    }
+    [data-testid="stDataFrame"] {
+        width: 100% !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -38,25 +45,64 @@ def load_traffic_data():
     df = pd.read_sql("""
         SELECT t.client_name AS "Клиент",
                t.manager AS "Менеджер",
-               t.contract_end AS "Дата окончания",
-               CASE t.crit_event_quarter WHEN 1 THEN '✅' ELSE '❌' END AS "Соб.1р/кв",
-               CASE t.crit_no_complaints WHEN 1 THEN '✅' ELSE '❌' END AS "Жалобы",
-               CASE t.crit_no_rejected_orders WHEN 1 THEN '✅' ELSE '❌' END AS "Наряды",
-               CASE t.crit_event_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Соб.2мес",
-               CASE t.crit_invoice_before_end WHEN 1 THEN '✅' ELSE '❌' END AS "Счет",
-               CASE t.crit_no_unsigned_docs WHEN 1 THEN '✅' ELSE '❌' END AS "Неп.док",
+               t.contract_end AS "Окончание",
+               t.crit_event_quarter, t.crit_no_complaints,
+               t.crit_no_rejected_orders, t.crit_event_before_end,
+               t.crit_invoice_before_end, t.crit_no_unsigned_docs,
                t.critical_bad AS "Крит",
                t.auxiliary_bad AS "Вспом",
                t.final_color AS "Цвет"
         FROM traffic_light_results t
         ORDER BY CASE t.final_color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, t.client_name
     """, conn)
+
+    details_map = {}
+    cur = conn.execute("SELECT client_name, criterion_name, status, reasoning FROM traffic_light_details")
+    for r in cur.fetchall():
+        cn = r["client_name"]
+        if cn not in details_map:
+            details_map[cn] = {}
+        details_map[cn][r["criterion_name"]] = {"status": r["status"], "reasoning": r["reasoning"]}
     conn.close()
-    return df
+
+    crit_cols = {
+        "Соб.1р/кв": ("crit_event_quarter", "Событие 1 раз в квартал"),
+        "Жалобы": ("crit_no_complaints", "Отсутствие жалоб за 3 мес"),
+        "Наряды": ("crit_no_rejected_orders", "Отсутствие нарядов (отклонен клиентом)"),
+        "Соб.2мес": ("crit_event_before_end", "Событие за 2 мес до окончания"),
+        "Счет": ("crit_invoice_before_end", "Счет на продление за 2 мес до окончания"),
+        "Неп.док": ("crit_no_unsigned_docs", "Отсутствие неподписанных документов"),
+    }
+
+    rows = []
+    for _, row in df.iterrows():
+        r = {k: row[k] for k in ["Клиент", "Менеджер", "Окончание", "Крит", "Вспом", "Цвет"]}
+        cname = row["Клиент"]
+        for label, (col, cname_full) in crit_cols.items():
+            status = row[col]
+            tip = ""
+            if cname in details_map and cname_full in details_map[cname]:
+                tip = details_map[cname][cname_full]["reasoning"]
+            icon = "✅" if status == 1 else "❌"
+            short = tip[:60].replace(";", ",") if tip else ""
+            if status == 0 and short and short.startswith("Есть"):
+                short = short[:50]
+            r[label] = f"{icon} {short}".strip() if status == 0 else icon
+        rows.append(r)
+
+    result = pd.DataFrame(rows)
+    result["_color"] = df["Цвет"].values
+    return result
 
 
 def render_color_row(row):
     color = row.get("Цвет", "green")
+    bg = COLOR_SUBTLE.get(color, "#ffffff")
+    return [f"background-color: {bg}"] * len(row)
+
+def render_color_row_2(row, fdf):
+    idx = row.name
+    color = fdf.iloc[idx]["_color"] if idx in fdf.index else "green"
     bg = COLOR_SUBTLE.get(color, "#ffffff")
     return [f"background-color: {bg}"] * len(row)
 
@@ -73,7 +119,7 @@ with right_col:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    chat_container = st.container(height=450)
+    chat_container = st.container(height=280)
     with chat_container:
         if not st.session_state.chat_history:
             st.caption("Спросите о данных: например, «сколько красных клиентов?» или «расскажи про клиента ЛТК»")
@@ -270,9 +316,11 @@ with left_col:
                 if selected_manager != "Все":
                     fdf = fdf[fdf["Менеджер"] == selected_manager]
                 if selected_color != "Все":
-                    fdf = fdf[fdf["Цвет"] == selected_color]
+                    fdf = fdf[fdf["_color"] == selected_color]
 
-                display_cols = [c for c in fdf.columns if c != "Цвет"]
+                display_cols = ["Клиент", "Менеджер", "Окончание",
+                                "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
+                                "Крит", "Вспом"]
 
                 col_help = {
                     "Соб.1р/кв": "Событие 1 раз в квартал: есть завершённое/перенесённое событие хотя бы в 1 из 3 месяцев (критичный)",
@@ -285,17 +333,24 @@ with left_col:
                     "Вспом": "Количество вспомогательных нарушений",
                 }
 
-                styled = fdf.style.apply(render_color_row, axis=1)
+                styled = fdf[display_cols].style.apply(
+                    lambda row: render_color_row_2(row, fdf), axis=1
+                )
+
+                for col in ["Соб.1р/кв", "Жалобы", "Наряды", "Неп.док"]:
+                    if col in fdf.columns:
+                        styled = styled.format({col: lambda v, col=col: v[:55] if len(str(v)) > 55 else v}, subset=[col])
+
                 selection = st.dataframe(
                     styled,
                     use_container_width=True,
-                    height=420,
+                    height=500,
                     on_select="rerun",
                     selection_mode="single-row",
                     key="tl_table",
                     column_config={
                         "Клиент": st.column_config.TextColumn(width="medium"),
-                        **{k: st.column_config.Column(help=v) for k, v in col_help.items()},
+                        **{k: st.column_config.Column(help=v, width="small") for k, v in col_help.items()},
                     },
                 )
 
@@ -325,7 +380,7 @@ with left_col:
                             color = "#2ecc71" if d["status"] else "#e74c3c"
                             det_cols[i % 3].markdown(
                                 f"<span style='color:{color}'><b>{icon} {d['criterion_name']}</b></span>  \n"
-                                f"<small>{d['reasoning'][:120]}</small>",
+                                f"<small>{d['reasoning'][:150]}</small>",
                                 unsafe_allow_html=True,
                             )
 
