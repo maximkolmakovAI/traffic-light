@@ -44,6 +44,7 @@ def check_crit_no_rejected_orders(conn, client_name):
 
 
 def is_near_end(contract_end_str):
+    """True если до окончания договора <= 67 дней (включая просроченные)."""
     if not contract_end_str or contract_end_str in ("", "nan", "None"):
         return False
     end_date = parse_date(contract_end_str)
@@ -51,16 +52,25 @@ def is_near_end(contract_end_str):
         return False
     today = date.today()
     days_to_end = (end_date - today).days
-    return 30 <= days_to_end <= 90
+    return days_to_end <= 67
+
+
+def _days_until(contract_end_str):
+    """Число дней до окончания договора (отрицательное если просрочен)."""
+    end_date = parse_date(contract_end_str)
+    if not end_date:
+        return None
+    return (end_date - date.today()).days
 
 
 def check_crit_event_before_end(conn, client_name, contract_end_str):
     if not is_near_end(contract_end_str):
-        return None, "Не применимо (договор заканчивается не через 30-90 дней)"
+        return None, "Не применимо (до окончания договора > 67 дней)"
     try:
+        days = _days_until(contract_end_str)
         cur = conn.execute("""
             SELECT has_completed_or_postponed, period, source_filename
-            FROM events WHERE client_name = ? AND period = 'апрель'
+            FROM events WHERE client_name = ?
             ORDER BY id DESC LIMIT 1
         """, (client_name,))
         row = cur.fetchone()
@@ -69,17 +79,22 @@ def check_crit_event_before_end(conn, client_name, contract_end_str):
             ok = val in ("да", "yes", "true", "1")
             src = row[2] or "неизвестный файл"
             if ok:
-                return True, f"Событие есть в апрельском отчете ({src})"
-            return False, f"События нет в апрельском отчете ({src}), значение: {row[0]}"
-        return False, "Нет данных о событиях за апрель"
+                return True, f"Событие есть (последнее: {row[1]}), файл: {src}"
+            if days is not None and days < 0:
+                return False, f"Договор просрочен на {-days} дн., события нет — провал"
+            return False, f"До окончания {days} дн., событие отсутствует — провал"
+        if days is not None and days < 0:
+            return False, f"Договор просрочен на {-days} дн., событий не было"
+        return False, "Нет данных о событиях"
     except Exception as e:
         return False, f"Ошибка: {e}"
 
 
 def check_crit_invoice_before_end(conn, client_name, contract_end_str):
     if not is_near_end(contract_end_str):
-        return None, "Не применимо (договор заканчивается не через 30-90 дней)"
+        return None, "Не применимо (до окончания договора > 67 дней)"
     try:
+        days = _days_until(contract_end_str)
         cur = conn.execute("""
             SELECT has_invoice, invoice_number, source_filename
             FROM renewal_invoices WHERE client_name = ?
@@ -88,8 +103,12 @@ def check_crit_invoice_before_end(conn, client_name, contract_end_str):
         src = row[2] if row and row[2] else "неизвестный файл"
         if row and row[0]:
             return True, f"Счет на продление есть ({row[1] or 'номер не указан'}), файл: {src}"
+        if days is not None and days < 0:
+            return False, f"Договор просрочен на {-days} дн., счета нет — провал"
         if row:
             return False, f"Счет на продление отсутствует, файл: {src}"
+        if days is not None and days < 0:
+            return False, f"Договор просрочен на {-days} дн., клиент не в отчете"
         return False, f"Клиент не найден в отчете 'Счета на продление'"
     except Exception as e:
         return False, f"Ошибка: {e}"

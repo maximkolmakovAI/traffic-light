@@ -108,6 +108,8 @@ def calculate_traffic_light(period_label=None):
 
 
 def determine_color(critical_bad, auxiliary_bad):
+    if critical_bad >= 2:
+        return COLOR_RED
     if (critical_bad >= 1 and auxiliary_bad >= 2) or auxiliary_bad >= 3:
         return COLOR_RED
     if critical_bad >= 1 or auxiliary_bad >= 2:
