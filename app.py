@@ -99,56 +99,26 @@ st.markdown(f"""
     .trend-down {{ color:#e74c3c; font-weight:bold; }}
     .trend-same {{ color:#95a5a6; }}
 
-    /* ── Mascot character ── */
+    /* ── Mascot styles (base, movement via JS) ── */
     .mascot {{
         position: fixed;
         font-size: 42px;
         z-index: 9999;
-        pointer-events: auto;
-        cursor: pointer;
-        animation: mascot-wander 35s infinite ease-in-out;
-        transition: transform 0.3s;
+        pointer-events: none;
         user-select: none;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        will-change: left, top;
     }}
-    .mascot:hover {{
-        animation: mascot-surprise 0.6s ease, mascot-wander 35s infinite ease-in-out;
-        transform: scale(1.3);
+    .mascot.idle {{
+        transition: all 2.5s cubic-bezier(0.6, 0, 0.4, 1);
     }}
-    @keyframes mascot-wander {{
-        0%   {{ left: 5%; top: 80%; }}
-        10%  {{ left: 15%; top: 70%; transform: scaleX(1); }}
-        20%  {{ left: 40%; top: 60%; transform: scaleX(-1); }}
-        30%  {{ left: 60%; top: 45%; transform: scaleX(1); }}
-        40%  {{ left: 75%; top: 55%; transform: scaleX(-1); }}
-        50%  {{ left: 85%; top: 30%; transform: scaleX(1); }}
-        60%  {{ left: 60%; top: 20%; transform: scaleX(-1); }}
-        70%  {{ left: 35%; top: 35%; transform: scaleX(1); }}
-        80%  {{ left: 20%; top: 50%; transform: scaleX(-1); }}
-        90%  {{ left: 10%; top: 65%; transform: scaleX(1); }}
-        100% {{ left: 5%; top: 80%; transform: scaleX(-1); }}
+    .mascot.sleeping {{
+        transition: all 0.8s ease;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+        opacity: 0.85;
     }}
-    @keyframes mascot-surprise {{
-        0%   {{ transform: scale(1) rotate(0deg); }}
-        25%  {{ transform: scale(1.4) rotate(-15deg); }}
-        50%  {{ transform: scale(1.1) rotate(10deg); }}
-        75%  {{ transform: scale(1.3) rotate(-5deg); }}
-        100% {{ transform: scale(1) rotate(0deg); }}
-    }}
-    /* Alternate mascot path when filter is active */
-    body.filter-red .mascot {{
-        animation: mascot-fast 20s infinite ease-in-out;
-    }}
-    @keyframes mascot-fast {{
-        0%   {{ left: 2%; top: 10%; }}
-        15%  {{ left: 30%; top: 30%; transform: scaleX(1); }}
-        30%  {{ left: 55%; top: 15%; transform: scaleX(-1); }}
-        45%  {{ left: 80%; top: 40%; transform: scaleX(1); }}
-        60%  {{ left: 65%; top: 70%; transform: scaleX(-1); }}
-        75%  {{ left: 35%; top: 85%; transform: scaleX(1); }}
-        90%  {{ left: 15%; top: 50%; transform: scaleX(-1); }}
-        100% {{ left: 2%; top: 10%; transform: scaleX(1); }}
-    }}
+
 
     .greeting-card {{
         background: rgba(255,255,255,0.15);
@@ -164,19 +134,87 @@ st.markdown(f"""
     .css-1offfwp {{ padding:0.5rem !important; }}
     {dark_adjust}
 </style>
-<div class="mascot" title="Я — маскот Валентины!">🐱</div>
+""", unsafe_allow_html=True)
+
+# Mascot HTML+JS (separate markdown to avoid f-string brace issues)
+st.markdown("""
+<div class="mascot" id="mascot-cat">🐱</div>
 <script>
-// Apply color filter class to body for theme backgrounds
-(function() {{
-    const el = document.querySelector('body');
-    if (el) {{
-        const params = new URLSearchParams(window.location.search);
-        // Streamlit doesn't easily expose session_state to JS, so we rely on Streamlit's DOM
-        // The color filter buttons change the URL via st.rerun, but we'll detect active filter
-        // via the button's active state in the DOM
-        // Actually, we'll inject the class from python instead
-    }}
-}})();
+(function() {
+  if (window.__catInit) return;
+  window.__catInit = true;
+
+  const cat = document.getElementById('mascot-cat');
+  if (!cat) return;
+  let idleTimer = null;
+  let isSleeping = false;
+  let currentDir = 1;
+
+  function randomWalk() {
+    if (isSleeping) return;
+    cat.style.transition = 'all 1.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    cat.style.left = (Math.random() * 75 + 2) + '%';
+    cat.style.top = (Math.random() * 65 + 20) + '%';
+    if (Math.random() > 0.5) { currentDir *= -1; }
+    cat.style.transform = 'scaleX(' + currentDir + ')';
+    cat.classList.remove('idle', 'sleeping');
+    setTimeout(randomWalk, 2000 + Math.random() * 3000);
+  }
+
+  function climbAndSleep() {
+    if (isSleeping) return;
+    isSleeping = true;
+    cat.classList.add('idle');
+    cat.style.transition = 'all 2.5s cubic-bezier(0.6, 0, 0.4, 1)';
+
+    cat.style.left = '45%';
+    cat.style.top = '75%';
+    cat.style.transform = 'scaleX(1)';
+
+    setTimeout(function() {
+      cat.style.left = '25%';
+      cat.style.top = '6%';
+      cat.style.transform = 'scaleX(1) rotate(0deg)';
+
+      setTimeout(function() {
+        cat.classList.add('sleeping');
+        cat.classList.remove('idle');
+        cat.style.transition = 'all 1.2s ease';
+        cat.style.left = '22%';
+        cat.style.top = '4%';
+        cat.style.transform = 'scaleX(1) rotate(4deg)';
+        cat.textContent = '\uD83D\uDE34';
+      }, 2500);
+    }, 2500);
+  }
+
+  function wakeUp() {
+    if (!isSleeping) return;
+    isSleeping = false;
+    cat.textContent = '\uD83D\uDC31';
+    cat.classList.remove('idle', 'sleeping');
+    cat.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    cat.style.transform = 'scaleX(1) rotate(0deg)';
+    cat.style.left = (Math.random() * 70 + 10) + '%';
+    cat.style.top = (Math.random() * 50 + 30) + '%';
+    setTimeout(randomWalk, 800);
+  }
+
+  function onUserAction() {
+    if (isSleeping) wakeUp();
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(climbAndSleep, 10000);
+  }
+
+  document.addEventListener('mousemove', onUserAction);
+  document.addEventListener('click', onUserAction);
+  document.addEventListener('scroll', onUserAction);
+
+  cat.style.left = '5%';
+  cat.style.top = '80%';
+  setTimeout(randomWalk, 500);
+  idleTimer = setTimeout(climbAndSleep, 10000);
+})();
 </script>
 """, unsafe_allow_html=True)
 
