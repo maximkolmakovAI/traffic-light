@@ -228,125 +228,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# Mascot: SVG pixel cat with CSS animations (legs, tail, head, yawn)
-st.markdown("""
-<div class="mascot" id="mascot-cat">
-<div id="cat-svg">
-<svg class="pixel-cat-svg" viewBox="0 0 60 60" width="64" height="64">
-<style>
-  .pixel-cat-svg { overflow:visible; }
-  .leg { animation: legAnim 0.35s infinite alternate ease-in-out; transform-origin:16px 44px; }
-  .leg:nth-child(2) { animation-delay:0.175s; transform-origin:24px 44px; }
-  .leg:nth-child(3) { animation-delay:0s; transform-origin:32px 44px; }
-  .leg:nth-child(4) { animation-delay:0.175s; transform-origin:38px 44px; }
-  @keyframes legAnim { from { transform:translateY(0); } to { transform:translateY(-4px); } }
-  .tail { animation: tailAnim 0.6s infinite alternate ease-in-out; transform-origin:44px 34px; }
-  @keyframes tailAnim { from { transform:rotate(-25deg); } to { transform:rotate(25deg); } }
-  .head-group { animation: headAnim 0.7s infinite alternate ease-in-out; transform-origin:23px 24px; }
-  @keyframes headAnim { from { transform:rotate(-3deg) translateY(0); } to { transform:rotate(3deg) translateY(-2px); } }
-  .eye { animation: blink 3.5s infinite; }
-  @keyframes blink { 0%,96%,100% { opacity:1; } 97%,99% { opacity:0; } }
-  .mouth { animation: yawn 8s infinite ease-in-out; }
-  @keyframes yawn {
-    0%,92%,100% { d:path("M 19,31 Q 23,35 27,31"); }
-    94%,98% { d:path("M 17,33 Q 23,40 29,33"); }
-  }
-  .stripe { opacity:0.35; }
-</style>
-<rect x="14" y="28" width="32" height="18" rx="5" fill="#F57C00"/>
-<path class="tail" d="M 44,34 Q 56,28 56,20" stroke="#F57C00" stroke-width="5" fill="none" stroke-linecap="round"/>
-<g class="head-group">
-  <polygon points="12,8 8,22 16,22" fill="#F57C00"/>
-  <polygon points="34,8 38,22 30,22" fill="#F57C00"/>
-  <polygon points="12,12 10,20 14,20" fill="#FFB74D"/>
-  <polygon points="34,12 36,20 32,20" fill="#FFB74D"/>
-  <circle cx="23" cy="24" r="11" fill="#F57C00"/>
-  <ellipse cx="18" cy="22" rx="3" ry="3.5" fill="#333"/>
-  <ellipse cx="28" cy="22" rx="3" ry="3.5" fill="#333"/>
-  <circle cx="17" cy="21" r="1.3" fill="#fff"/>
-  <circle cx="27" cy="21" r="1.3" fill="#fff"/>
-  <ellipse cx="23" cy="27" rx="2" ry="1.5" fill="#FF69B4"/>
-  <path class="mouth" d="M 19,31 Q 23,35 27,31" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-  <line x1="6" y1="24" x2="14" y2="26" stroke="#333" stroke-width="1"/>
-  <line x1="6" y1="28" x2="14" y2="28" stroke="#333" stroke-width="1"/>
-  <line x1="32" y1="26" x2="40" y2="24" stroke="#333" stroke-width="1"/>
-  <line x1="32" y1="28" x2="40" y2="28" stroke="#333" stroke-width="1"/>
-</g>
-<rect class="leg" x="15" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
-<rect class="leg" x="23" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
-<rect class="leg" x="31" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
-<rect class="leg" x="39" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
-<rect class="stripe" x="19" y="32" width="3" height="10" rx="1.5" fill="#E65100"/>
-<rect class="stripe" x="27" y="34" width="3" height="8" rx="1.5" fill="#E65100"/>
-<rect class="stripe" x="35" y="36" width="3" height="6" rx="1.5" fill="#E65100"/>
-</svg>
-</div>
-<span id="cat-sleep" style="display:none;font-size:64px;line-height:1;"></span>
-</div>
-""", unsafe_allow_html=True)
-# JS enhancement for idle detection (if script executes, overrides CSS positioning)
-st.markdown("""
-<script>
-if (!window.__catInit) {
-  window.__catInit = true;
-  (function() {
-    var cat = document.getElementById('mascot-cat');
-    if (!cat) return;
-    var svgEl = document.getElementById('cat-svg');
-    var sleepEl = document.getElementById('cat-sleep');
-    var idleTimer = null, isSleeping = false, dir = 1;
-    function stopCSS() {
-      cat.style.animation = 'none';
-      cat.style.transition = 'all 1.8s cubic-bezier(0.34,1.56,0.64,1)';
-    }
-    function walk() {
-      if (isSleeping) return;
-      stopCSS();
-      cat.style.left = (Math.random()*75+2)+'%';
-      cat.style.top = (Math.random()*65+20)+'%';
-      if (Math.random()>0.5) dir *= -1;
-      cat.style.transform = 'scaleX('+dir+')';
-      setTimeout(walk, 2500+Math.random()*2500);
-    }
-    function climb() {
-      if (isSleeping) return;
-      isSleeping = true;
-      stopCSS();
-      cat.style.transition = 'all 2.5s cubic-bezier(0.6,0,0.4,1)';
-      cat.style.left = '45%'; cat.style.top = '75%'; cat.style.transform = 'scaleX(1)';
-      setTimeout(function(){
-        cat.style.left = '22%'; cat.style.top = '5%'; cat.style.transform = 'scaleX(1)';
-        setTimeout(function(){
-          cat.style.transition = 'all 0.8s ease';
-          cat.style.opacity = '0.8';
-          svgEl.style.display = 'none';
-          sleepEl.style.display = 'inline';
-          sleepEl.textContent = String.fromCodePoint(0x1F634);
-        },2500);
-      },2500);
-    }
-    function wake() {
-      if (!isSleeping) return;
-      isSleeping = false;
-      svgEl.style.display = '';
-      sleepEl.style.display = 'none';
-      cat.style.opacity = '1';
-      cat.style.animation = '';
-      cat.style.transition = 'all 0.6s cubic-bezier(0.34,1.56,0.64,1)';
-      cat.style.left = (Math.random()*70+10)+'%';
-      cat.style.top = (Math.random()*50+30)+'%';
-      setTimeout(function(){ cat.style.animation = 'none'; walk(); }, 600);
-    }
-    function onAction() { if (isSleeping) wake(); clearTimeout(idleTimer); idleTimer = setTimeout(climb, 10000); }
-    document.addEventListener('mousemove', onAction);
-    document.addEventListener('click', onAction);
-    document.addEventListener('scroll', onAction);
-    setTimeout(walk, 1500);
-    idleTimer = setTimeout(climb, 10000);
-  })();
-}
-</script>
-""", unsafe_allow_html=True)
+# Cat hidden
 
 
 def get_details_map():
@@ -642,7 +524,8 @@ with tab_main:
             with flt3:
                 show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
-                trend_filter = st.radio("Тренд:", ["Все", "🟢↑ Улучшились", "🔴↓ Ухудшились"],
+                trend_filter = st.radio("Тренд:", ["all", "up", "down"],
+                    format_func=lambda x: {"all": "Все", "up": "🟢↑ Улучшились", "down": "🔴↓ Ухудшились"}[x],
                     horizontal=True, key="trend_f", label_visibility="collapsed")
 
             fdf = df.copy()
@@ -661,9 +544,9 @@ with tab_main:
                 fdf = fdf[fdf.apply(is_on_verge, axis=1)]
 
             # ── Trend filter ──
-            if trend_filter == "🟢↑ Улучшились":
+            if trend_filter == "up":
                 fdf = fdf[fdf["Тренд"] == "🟢↑"]
-            elif trend_filter == "🔴↓ Ухудшились":
+            elif trend_filter == "down":
                 fdf = fdf[fdf["Тренд"] == "🔴↓"]
 
             if selected_manager != "Все":
