@@ -102,14 +102,12 @@ st.markdown(f"""
     /* ── Mascot styles (pure CSS, no JS needed) ── */
     .mascot {{
         position: fixed;
-        font-size: 64px;
-        line-height: 1;
         z-index: 9999;
         pointer-events: none;
         user-select: none;
         filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
-        image-rendering: pixelated;
         animation: mascot-cycle 56s infinite ease-in-out;
+        width:64px; height:64px;
     }}
     @keyframes mascot-cycle {{
         /* wandering */
@@ -203,12 +201,59 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# Mascot: pure CSS pixel cat (no emoji encoding issues on Py3.14)
-CAT_CHAR = chr(0x1F408)  # 🐈 full body cat
-st.markdown(
-    '<div class="mascot" id="mascot-cat">' + CAT_CHAR + '</div>',
-    unsafe_allow_html=True,
-)
+# Mascot: SVG pixel cat with CSS animations (legs, tail, head, yawn)
+st.markdown("""
+<div class="mascot" id="mascot-cat">
+<svg class="pixel-cat-svg" viewBox="0 0 60 60" width="64" height="64">
+<style>
+  .pixel-cat-svg { overflow:visible; }
+  .leg { animation: legAnim 0.35s infinite alternate ease-in-out; transform-origin:16px 44px; }
+  .leg:nth-child(2) { animation-delay:0.175s; transform-origin:24px 44px; }
+  .leg:nth-child(3) { animation-delay:0s; transform-origin:32px 44px; }
+  .leg:nth-child(4) { animation-delay:0.175s; transform-origin:38px 44px; }
+  @keyframes legAnim { from { transform:translateY(0); } to { transform:translateY(-4px); } }
+  .tail { animation: tailAnim 0.6s infinite alternate ease-in-out; transform-origin:44px 34px; }
+  @keyframes tailAnim { from { transform:rotate(-25deg); } to { transform:rotate(25deg); } }
+  .head-group { animation: headAnim 0.7s infinite alternate ease-in-out; transform-origin:23px 24px; }
+  @keyframes headAnim { from { transform:rotate(-3deg) translateY(0); } to { transform:rotate(3deg) translateY(-2px); } }
+  .eye { animation: blink 3.5s infinite; }
+  @keyframes blink { 0%,96%,100% { opacity:1; } 97%,99% { opacity:0; } }
+  .mouth { animation: yawn 8s infinite ease-in-out; }
+  @keyframes yawn {
+    0%,92%,100% { d:path("M 19,31 Q 23,35 27,31"); }
+    94%,98% { d:path("M 17,33 Q 23,40 29,33"); }
+  }
+  .stripe { opacity:0.35; }
+</style>
+<rect x="14" y="28" width="32" height="18" rx="5" fill="#F57C00"/>
+<path class="tail" d="M 44,34 Q 56,28 56,20" stroke="#F57C00" stroke-width="5" fill="none" stroke-linecap="round"/>
+<g class="head-group">
+  <polygon points="12,8 8,22 16,22" fill="#F57C00"/>
+  <polygon points="34,8 38,22 30,22" fill="#F57C00"/>
+  <polygon points="12,12 10,20 14,20" fill="#FFB74D"/>
+  <polygon points="34,12 36,20 32,20" fill="#FFB74D"/>
+  <circle cx="23" cy="24" r="11" fill="#F57C00"/>
+  <ellipse cx="18" cy="22" rx="3" ry="3.5" fill="#333"/>
+  <ellipse cx="28" cy="22" rx="3" ry="3.5" fill="#333"/>
+  <circle cx="17" cy="21" r="1.3" fill="#fff"/>
+  <circle cx="27" cy="21" r="1.3" fill="#fff"/>
+  <ellipse cx="23" cy="27" rx="2" ry="1.5" fill="#FF69B4"/>
+  <path class="mouth" d="M 19,31 Q 23,35 27,31" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <line x1="6" y1="24" x2="14" y2="26" stroke="#333" stroke-width="1"/>
+  <line x1="6" y1="28" x2="14" y2="28" stroke="#333" stroke-width="1"/>
+  <line x1="32" y1="26" x2="40" y2="24" stroke="#333" stroke-width="1"/>
+  <line x1="32" y1="28" x2="40" y2="28" stroke="#333" stroke-width="1"/>
+</g>
+<rect class="leg" x="15" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
+<rect class="leg" x="23" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
+<rect class="leg" x="31" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
+<rect class="leg" x="39" y="44" width="6" height="10" rx="3" fill="#F57C00"/>
+<rect class="stripe" x="19" y="32" width="3" height="10" rx="1.5" fill="#E65100"/>
+<rect class="stripe" x="27" y="34" width="3" height="8" rx="1.5" fill="#E65100"/>
+<rect class="stripe" x="35" y="36" width="3" height="6" rx="1.5" fill="#E65100"/>
+</svg>
+</div>
+""", unsafe_allow_html=True)
 # JS enhancement for idle detection (if script executes, overrides CSS positioning)
 st.markdown("""
 <script>
@@ -558,7 +603,7 @@ with tab_main:
 
         if not df.empty:
             # ── Filters row ──
-            flt1, flt2, flt3, flt4, flt5 = st.columns([2, 2, 2, 1, 1])
+            flt1, flt2, flt3, flt4 = st.columns([2, 2, 2, 3])
 
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
@@ -571,12 +616,10 @@ with tab_main:
                     format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
                     key="col_f", label_visibility="collapsed")
             with flt3:
-                show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge", label_visibility="collapsed")
-                st.caption("На грани ухудшения")
+                show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
-                show_improved = st.checkbox("🟢↑ Улучшились", key="show_improved", label_visibility="collapsed")
-            with flt5:
-                show_worsened = st.checkbox("🔴↓ Ухудшились", key="show_worsened", label_visibility="collapsed")
+                trend_filter = st.radio("Тренд:", ["Все", "🟢↑ Улучшились", "🔴↓ Ухудшились"],
+                    horizontal=True, key="trend_f", label_visibility="collapsed")
 
             fdf = df.copy()
 
@@ -593,10 +636,10 @@ with tab_main:
                     return False
                 fdf = fdf[fdf.apply(is_on_verge, axis=1)]
 
-            # ── Trend filters ──
-            if show_improved:
+            # ── Trend filter ──
+            if trend_filter == "🟢↑ Улучшились":
                 fdf = fdf[fdf["Тренд"] == "🟢↑"]
-            if show_worsened:
+            elif trend_filter == "🔴↓ Ухудшились":
                 fdf = fdf[fdf["Тренд"] == "🔴↓"]
 
             if selected_manager != "Все":
