@@ -48,12 +48,19 @@ greeting = random.choice(UNIVERSE_QUOTES[uni])
 # ── Backgrounds by time-of-day + color-filter theme ──
 hour = datetime.now().hour
 filter_color = st.session_state.get("_color_filter", None)
+# Subtle semi-transparent backgrounds
 if filter_color == "green":
-    bg_style = "background: linear-gradient(135deg, #a8e063 0%, #56ab2f 50%, #2d8a17 100%);"
+    bg_style = """background: linear-gradient(135deg, rgba(46,204,113,0.12) 0%, rgba(39,174,96,0.08) 100%),
+                         radial-gradient(circle at 20% 80%, rgba(46,204,113,0.06) 0%, transparent 50%),
+                         radial-gradient(circle at 80% 20%, rgba(39,174,96,0.06) 0%, transparent 50%);"""
 elif filter_color == "yellow":
-    bg_style = "background: linear-gradient(135deg, #f7971e 0%, #ffd200 50%, #e8a317 100%);"
+    bg_style = """background: linear-gradient(135deg, rgba(241,196,15,0.12) 0%, rgba(243,156,18,0.08) 100%),
+                         radial-gradient(circle at 30% 70%, rgba(241,196,15,0.06) 0%, transparent 50%),
+                         radial-gradient(circle at 70% 30%, rgba(243,156,18,0.06) 0%, transparent 50%);"""
 elif filter_color == "red":
-    bg_style = "background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 50%, #8b0000 100%);"
+    bg_style = """background: linear-gradient(135deg, rgba(231,76,60,0.12) 0%, rgba(192,57,43,0.08) 100%),
+                         radial-gradient(circle at 40% 60%, rgba(231,76,60,0.06) 0%, transparent 50%),
+                         radial-gradient(circle at 60% 40%, rgba(192,57,43,0.06) 0%, transparent 50%);"""
 elif 6 <= hour < 9:
     bg_style = "background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);"
     bg_time_str = "🌅 Рассвет"
@@ -88,13 +95,6 @@ st.markdown(f"""
     .chat-ai {{ background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {{ gap:0.15rem; }}
     .cell-info {{ background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; color:#000 !important; }}
-    .color-btn {{
-        display:inline-block; padding:0.5rem 1rem; margin:0.2rem; border-radius:0.5rem;
-        border:2px solid transparent; cursor:pointer; font-weight:bold; text-align:center;
-        transition: all 0.2s; min-width:120px;
-    }}
-    .color-btn:hover {{ transform:scale(1.03); opacity:0.9; }}
-    .color-btn.active {{ border-color:#333; box-shadow:0 0 8px rgba(0,0,0,0.3); }}
     .trend-up {{ color:#2ecc71; font-weight:bold; }}
     .trend-down {{ color:#e74c3c; font-weight:bold; }}
     .trend-same {{ color:#95a5a6; }}
@@ -166,6 +166,7 @@ st.markdown(f"""
         padding:1px 3px !important; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }}
     /* narrow columns for short criteria names */
+    /* col 5 = Соб.1р/кв, col 8 = Соб.2мес */
     [data-testid="stDataFrame"] th:nth-child(5),
     [data-testid="stDataFrame"] th:nth-child(8) {{
         max-width:55px !important; width:55px !important;
@@ -174,10 +175,18 @@ st.markdown(f"""
     [data-testid="stDataFrame"] td:nth-child(8) {{
         max-width:55px !important; width:55px !important;
     }}
-    [data-testid="stDataFrame"] th:nth-child(6),
-    [data-testid="stDataFrame"] th:nth-child(7),
+    /* col 9 = Счет, col 10 = Документы — narrower */
     [data-testid="stDataFrame"] th:nth-child(9),
     [data-testid="stDataFrame"] th:nth-child(10) {{
+        max-width:30px !important; width:30px !important;
+    }}
+    [data-testid="stDataFrame"] td:nth-child(9),
+    [data-testid="stDataFrame"] td:nth-child(10) {{
+        max-width:30px !important; width:30px !important;
+    }}
+    /* col 6=Жалобы, 7=Наряды */
+    [data-testid="stDataFrame"] th:nth-child(6),
+    [data-testid="stDataFrame"] th:nth-child(7) {{
         max-width:40px !important; width:40px !important;
     }}
     [data-testid="stDataFrame"] td:nth-child(6),
@@ -197,6 +206,22 @@ st.markdown(f"""
     /* Client name column gets more space */
     [data-testid="stDataFrame"] th:nth-child(2) {{ min-width:120px !important; }}
     [data-testid="stDataFrame"] td:nth-child(2) {{ min-width:120px !important; }}
+    /* ── Color filter buttons ── */
+    div[data-testid*="cf_green"] button {{
+        background-color:rgba(46,204,113,0.2) !important;
+        border-color:#2ecc71 !important; color:#1a7a42 !important;
+    }}
+    div[data-testid*="cf_yellow"] button {{
+        background-color:rgba(241,196,15,0.2) !important;
+        border-color:#f1c40f !important; color:#8a6d00 !important;
+    }}
+    div[data-testid*="cf_red"] button {{
+        background-color:rgba(231,76,60,0.2) !important;
+        border-color:#e74c3c !important; color:#8a1a1a !important;
+    }}
+    div[data-testid*="cf_"] button[kind="primary"] {{
+        font-weight:bold !important; transform:scale(1.03);
+    }}
     {dark_adjust}
 </style>
 """, unsafe_allow_html=True)
@@ -403,7 +428,10 @@ def load_traffic_data():
 
 def render_color_row(row, fdf):
     idx = row.name if hasattr(row, "name") else 0
-    color = fdf.iloc[idx]["_color"] if idx in fdf.index else "green"
+    try:
+        color = fdf.at[idx, "_color"]
+    except (KeyError, ValueError, IndexError):
+        color = "green"
     bg = COLOR_BG.get(color, "#ffffff")
     return [f"background-color: {bg}"] * len(row)
 
@@ -590,15 +618,8 @@ with tab_main:
             (col_r, "red", "Красный", counts.get("red", 0)),
         ]:
             is_active = active_filter == color
-            bg = COLOR_HEX.get(color, "#ccc")
-            txt = "#fff" if color == "red" else "#333"
-            active_cls = "active" if is_active else ""
-            col.markdown(
-                f"<div class='color-btn {active_cls}' style='background:{bg};color:{txt}' "
-                f"onclick='alert(\"streamlit filter\")'>{label}: {cnt}</div>",
-                unsafe_allow_html=True,
-            )
-            if col.button(f"{label}: {cnt}", key=f"cf_{color}", use_container_width=True,
+            if col.button(f"{'●' if is_active else '○'} {label}: {cnt}",
+                          key=f"cf_{color}", use_container_width=True,
                           type="primary" if is_active else "secondary"):
                 _click_filter(color)
                 st.rerun()
