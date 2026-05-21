@@ -136,9 +136,13 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# Mascot HTML+JS (separate markdown to avoid f-string brace issues)
+# Mascot HTML+JS (emoji via unicode escapes to avoid UnicodeEncodeError on Py3.14)
+CAT_EMOJI = chr(0x1F431)  # 🐱
+st.markdown(
+    '<div class="mascot" id="mascot-cat">' + CAT_EMOJI + '</div>',
+    unsafe_allow_html=True,
+)
 st.markdown("""
-<div class="mascot" id="mascot-cat">🐱</div>
 <script>
 (function() {
   if (window.__catInit) return;
@@ -160,6 +164,9 @@ st.markdown("""
     cat.classList.remove('idle', 'sleeping');
     setTimeout(randomWalk, 2000 + Math.random() * 3000);
   }
+
+  var SLEEP = String.fromCodePoint(0x1F634);
+  var AWAKE = String.fromCodePoint(0x1F431);
 
   function climbAndSleep() {
     if (isSleeping) return;
@@ -183,7 +190,7 @@ st.markdown("""
         cat.style.left = '22%';
         cat.style.top = '4%';
         cat.style.transform = 'scaleX(1) rotate(4deg)';
-        cat.textContent = '\uD83D\uDE34';
+        cat.textContent = SLEEP;
       }, 2500);
     }, 2500);
   }
@@ -191,7 +198,7 @@ st.markdown("""
   function wakeUp() {
     if (!isSleeping) return;
     isSleeping = false;
-    cat.textContent = '\uD83D\uDC31';
+    cat.textContent = AWAKE;
     cat.classList.remove('idle', 'sleeping');
     cat.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
     cat.style.transform = 'scaleX(1) rotate(0deg)';
