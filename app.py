@@ -502,6 +502,7 @@ with tab_main:
                           key=f"cf_{color}", use_container_width=True,
                           type="primary" if is_active else "secondary"):
                 st.session_state["col_f"] = "Все" if is_active else color
+                st.rerun()
 
         # ── Cache data ──
         if "_cache" not in st.session_state or st.session_state.pop("_refresh", False):
