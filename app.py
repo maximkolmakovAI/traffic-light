@@ -22,28 +22,30 @@ COLOR_HEX = {"green": "#2ecc71", "yellow": "#f1c40f", "red": "#e74c3c"}
 # ── Universe greeting ──
 import random
 random.seed(int(datetime.now().timestamp()) % 1000)
+NAME_VARIANTS = ["Валя", "Валентина", "Леди Валентина", "Валентина фон Рук"]
+_NAME = random.choice(NAME_VARIANTS)
 UNIVERSE_QUOTES = {
     "marvel": [
-        "Великая сила — великая ответственность. А у Валентины — великие клиенты! 🕸️",
-        "Мстители собираются! Валентина, твоя база ждёт своего героя. 🦸‍♀️",
-        "Валентина, ты — Железный человек среди менеджеров! 🤖",
-        "С надеждой и упорством, как Капитан Америка, Валентина ведёт менеджеров в бой! 🛡️",
+        "Великая сила — великая ответственность. А у {n} — великие клиенты! \U0001F578\uFE0F",
+        "Мстители собираются! {n}, твоя база ждёт своего героя. \U0001F9B8\u200D\u2640\uFE0F",
+        "{n} — Железный человек среди менеджеров! \U0001F916",
+        "С надеждой и упорством, как Капитан Америка, {n} ведёт менеджеров в бой! \U0001F6E1\uFE0F",
     ],
     "starwars": [
-        "Да пребудет с тобой Сила, Валентина! Менеджеры ждут твоих указаний. ✨",
-        "Валентина — наш джедай в мире клиентского сервиса 🪐",
-        "Империя не ждёт! Валентина, пора запускать светофор! 🚀",
-        "Ты — наша последняя надежда, Валентина! Менеджеры готовы к миссии. 🌟",
+        "Да пребудет с тобой Сила, {n}! Менеджеры ждут твоих указаний. \u2728",
+        "{n} — наш джедай в мире клиентского сервиса \U0001FABC",
+        "Империя не ждёт! {n}, пора запускать светофор! \U0001F680",
+        "Ты — наша последняя надежда, {n}! Менеджеры готовы к миссии. \U0001F31F",
     ],
     "harrypotter": [
-        "Валентина, ты — настоящая Гермиона: без тебя менеджеры как без палочки! 🪄",
-        "После трёх чашек кофе Валентина видит даже дементоров в отчётах! ☕🦉",
-        "Валентина, Минерва Макгонагалл отдыхает — ты ведёшь менеджеров твёрдой рукой! ⚡",
-        "Орден Феникса вызывает Валентину! База клиентов ждёт сортировки как Распределяющая шляпа! 🎩",
+        "{n}, ты — настоящая Гермиона: без тебя менеджеры как без палочки! \U0001FA84",
+        "После трёх чашек кофе {n} видит даже дементоров в отчётах! \u2615\u200D\U0001F409",
+        "{n}, Минерва Макгонагалл отдыхает — ты ведёшь менеджеров твёрдой рукой! \u26A1",
+        "Орден Феникса вызывает {n}! База клиентов ждёт сортировки как Распределяющая шляпа! \U0001FA99",
     ],
 }
 uni = random.choice(["marvel", "starwars", "harrypotter"])
-greeting = random.choice(UNIVERSE_QUOTES[uni])
+greeting = random.choice(UNIVERSE_QUOTES[uni]).format(n=_NAME)
 
 # ── Backgrounds by time-of-day + color-filter theme ──
 hour = datetime.now().hour
@@ -451,7 +453,7 @@ st.title("🚦 Светофор по клиентской базе")
 
 # ── Universe greeting ──
 st.markdown(
-    f"<div class='greeting-card'>✨ <b>Валентина</b>, {greeting}</div>",
+    f"<div class='greeting-card'>✨ {greeting}</div>",
     unsafe_allow_html=True,
 )
 
@@ -673,10 +675,10 @@ with tab_main:
 
             if selected_manager != "Все":
                 fdf = fdf[fdf["Менеджер"] == selected_manager]
-            if selected_color != "Все" and not active_filter:
-                fdf = fdf[fdf["_color"] == selected_color]
-            elif active_filter and selected_color == "Все":
+            if active_filter:
                 fdf = fdf[fdf["_color"] == active_filter]
+            elif selected_color != "Все":
+                fdf = fdf[fdf["_color"] == selected_color]
 
             # ── Display columns with trend ──
             display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
@@ -685,7 +687,12 @@ with tab_main:
 
             styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
 
-            st.dataframe(styled, use_container_width=True, height=560)
+            st.dataframe(styled, use_container_width=True, height=560,
+                column_config={
+                    "Соб.1р/кв": st.column_config.Column(width="small"),
+                    "Соб.2мес": st.column_config.Column(width="small"),
+                    "Счет": st.column_config.Column(width="small"),
+                })
 
             # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
