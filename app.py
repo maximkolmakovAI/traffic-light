@@ -49,7 +49,7 @@ greeting = random.choice(UNIVERSE_QUOTES[uni]).format(n=_NAME)
 
 # ── Backgrounds by time-of-day + color-filter theme ──
 hour = datetime.now().hour
-filter_color = st.session_state.get("_color_filter", None)
+filter_color = st.session_state.get("col_f", "Все")
 # Subtle semi-transparent backgrounds
 if filter_color == "green":
     bg_style = """background: linear-gradient(135deg, rgba(46,204,113,0.12) 0%, rgba(39,174,96,0.08) 100%),
@@ -607,23 +607,19 @@ with tab_main:
         st.rerun()
 
     if total > 0:
-        # ── Color filter buttons ──
+        # ── Color filter buttons (shortcuts that set selectbox) ──
         col_g, col_y, col_r = st.columns(3)
-        active_filter = filter_color
-
-        def _click_filter(color):
-            cur = st.session_state.get("_color_filter", None)
-            st.session_state["_color_filter"] = None if cur == color else color
+        cur_color = st.session_state.get("col_f", "Все")
         for col, color, label, cnt in [
             (col_g, "green", "Зеленый", counts.get("green", 0)),
             (col_y, "yellow", "Желтый", counts.get("yellow", 0)),
             (col_r, "red", "Красный", counts.get("red", 0)),
         ]:
-            is_active = active_filter == color
+            is_active = cur_color == color
             if col.button(f"{'●' if is_active else '○'} {label}: {cnt}",
                           key=f"cf_{color}", use_container_width=True,
                           type="primary" if is_active else "secondary"):
-                _click_filter(color)
+                st.session_state["col_f"] = "Все" if is_active else color
                 st.rerun()
 
         # ── Cache data ──
@@ -640,10 +636,7 @@ with tab_main:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
-                color_opts = ["Все", "green", "yellow", "red"]
-                if active_filter:
-                    color_opts = [active_filter]
-                selected_color = st.selectbox("Зона", color_opts,
+                selected_color = st.selectbox("Зона", ["Все", "green", "yellow", "red"],
                     format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
                     key="col_f", label_visibility="collapsed")
             with flt3:
@@ -675,9 +668,7 @@ with tab_main:
 
             if selected_manager != "Все":
                 fdf = fdf[fdf["Менеджер"] == selected_manager]
-            if active_filter:
-                fdf = fdf[fdf["_color"] == active_filter]
-            elif selected_color != "Все":
+            if selected_color != "Все":
                 fdf = fdf[fdf["_color"] == selected_color]
 
             # ── Display columns with trend ──
