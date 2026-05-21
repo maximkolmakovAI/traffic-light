@@ -158,6 +158,16 @@ def init_db():
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS traffic_light_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT NOT NULL,
+            final_color TEXT NOT NULL,
+            calc_date TEXT NOT NULL,
+            period_label TEXT NOT NULL
+        )
+    """)
+
     for t in ["events", "complaints", "rejected_orders", "renewal_invoices", "unsigned_docs"]:
         _ensure_col(conn, t, "source_filename", "source_filename TEXT")
 
@@ -173,6 +183,8 @@ def init_db():
         ("idx_unsigned_client", "unsigned_docs", "client_name"),
         ("idx_traffic_client", "traffic_light_results", "client_name"),
         ("idx_traffic_details_client", "traffic_light_details", "client_name"),
+        ("idx_snapshot_client", "traffic_light_snapshots", "client_name"),
+        ("idx_snapshot_period", "traffic_light_snapshots", "period_label"),
     ]
     for name, table, col in indices:
         try:
@@ -185,7 +197,7 @@ def init_db():
 
 def clear_all_data():
     conn = get_conn()
-    tables = ["traffic_light_details", "traffic_light_results", "unsigned_docs",
+    tables = ["traffic_light_details", "traffic_light_results", "traffic_light_snapshots", "unsigned_docs",
               "renewal_invoices", "rejected_orders", "complaints", "events",
               "clients", "source_uploads"]
     for t in tables:

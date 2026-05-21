@@ -5,26 +5,76 @@ import io
 import threading
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 
 from db.database import init_db, get_conn
 from db.seed import seed_demo_data
 from etl.loader import run_all_etl
 from etl.single_load import load_file_by_buffer, load_file_by_path, check_conflicts, resolve_conflicts
-from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client
-from ai_assistant import ask_ai
+from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client, get_transitions, get_client_color_in_snapshot
 
 st.set_page_config(page_title="Светофор по клиентам", page_icon="🚦", layout="wide")
 
 COLOR_LABEL = {"green": "Зеленый", "yellow": "Желтый", "red": "Красный"}
-COLOR_SUBTLE = {"green": "#d4edda", "yellow": "#fff3cd", "red": "#f8d7da"}
+COLOR_BG = {"green": "#d4edda", "yellow": "#fff3cd", "red": "#f8d7da"}
+COLOR_HEX = {"green": "#2ecc71", "yellow": "#f1c40f", "red": "#e74c3c"}
 
-st.markdown("""
+# ── Time-of-day background ──
+hour = datetime.now().hour
+if 6 <= hour < 9:
+    bg_style = """
+    background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);
+    """
+    bg_msg = "🌅 Рассвет"
+elif 9 <= hour < 18:
+    bg_style = """
+    background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+    """
+    bg_msg = "☀️ День"
+elif 18 <= hour < 21:
+    bg_style = """
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);
+    """
+    bg_msg = "🌇 Закат"
+else:
+    bg_style = """
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    """
+    bg_msg = "🌙 Ночь"
+
+# Dark theme adjustments for night
+text_color = "#e0e0e0" if hour < 6 or hour >= 21 else "#1a1a2e"
+dark_adjust = """
+    .stApp, .stApp header, .stApp footer { color: #e0e0e0 !important; }
+    .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh { color: #e0e0e0 !important; }
+    .stSelectbox label, .stCheckbox label, .stMetric label { color: #e0e0e0 !important; }
+    h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span:not([class*="emoji"]) {
+        color: #e0e0e0 !important;
+    }
+""" if hour < 6 or hour >= 21 else ""
+
+st.markdown(f"""
 <style>
-    .chat-user { background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
-    .chat-ai { background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; }
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] { gap:0.15rem; }
-    .cell-info { background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; }
+    .stApp {{
+        {bg_style}
+        background-attachment: fixed;
+    }}
+    .chat-user {{ background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
+    .chat-ai {{ background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {{ gap:0.15rem; }}
+    .cell-info {{ background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; color:#000 !important; }}
+    .color-btn {{
+        display:inline-block; padding:0.5rem 1rem; margin:0.2rem; border-radius:0.5rem;
+        border:2px solid transparent; cursor:pointer; font-weight:bold; text-align:center;
+        transition: all 0.2s; min-width:120px;
+    }}
+    .color-btn:hover {{ transform:scale(1.03); opacity:0.9; }}
+    .color-btn.active {{ border-color:#333; box-shadow:0 0 8px rgba(0,0,0,0.3); }}
+    .trend-up {{ color:#2ecc71; font-weight:bold; }}
+    .trend-down {{ color:#e74c3c; font-weight:bold; }}
+    .trend-same {{ color:#95a5a6; }}
+    .css-1offfwp {{ padding:0.5rem !important; }}
+    {dark_adjust}
 </style>
 """, unsafe_allow_html=True)
 
@@ -66,7 +116,7 @@ def load_traffic_data():
         "Наряды": ("crit_no_rejected_orders", "Отсутствие нарядов (отклонен клиентом)"),
         "Соб.2мес": ("crit_event_before_end", "Событие за 2 мес до окончания"),
         "Счет": ("crit_invoice_before_end", "Счет на продление за 2 мес до окончания"),
-        "Неп.док": ("crit_no_unsigned_docs", "Отсутствие неподписанных документов"),
+        "Документы": ("crit_no_unsigned_docs", "Отсутствие неподписанных документов"),
     }
 
     rows = []
@@ -85,29 +135,39 @@ def load_traffic_data():
 
     result = pd.DataFrame(rows)
     result["_color"] = df["Цвет"].values
+    result["_crit_bad"] = df["Крит"].values
+    result["_aux_bad"] = df["Вспом"].values
+
+    # ── Trend column ──
+    trends = []
+    for _, row in df.iterrows():
+        prev = get_client_color_in_snapshot(row["Клиент"])
+        cur_c = row["Цвет"]
+        color_order = {"green": 0, "yellow": 1, "red": 2}
+        if prev and prev in color_order and cur_c in color_order:
+            if color_order[cur_c] < color_order[prev]:
+                trends.append("🟢↑")  # improved
+            elif color_order[cur_c] > color_order[prev]:
+                trends.append("🔴↓")  # worsened
+            else:
+                trends.append("⚪→")  # same
+        else:
+            trends.append("")
+    result["Тренд"] = trends
+
     return result, crit_cols, details_map
 
 
-def render_color_row_2(row, fdf):
+def render_color_row(row, fdf):
     idx = row.name if hasattr(row, "name") else 0
     color = fdf.iloc[idx]["_color"] if idx in fdf.index else "green"
-    bg = COLOR_SUBTLE.get(color, "#ffffff")
+    bg = COLOR_BG.get(color, "#ffffff")
     return [f"background-color: {bg}"] * len(row)
-
-
-def _extract_selection(selection):
-    """Extract (client_name, column_name) from st.dataframe selection."""
-    try:
-        sel = selection.selection if hasattr(selection, "selection") else selection
-        sel_rows = sel.rows if hasattr(sel, "rows") else sel.get("rows", [])
-        sel_cols = sel.columns if hasattr(sel, "columns") else sel.get("columns", [])
-        return sel_rows, sel_cols
-    except Exception:
-        return [], []
 
 
 def async_ai(user_msg, history_copy):
     try:
+        from ai_assistant import ask_ai
         reply = ask_ai(user_msg, history_copy)
         st.session_state["_ai_reply_ready"] = reply
     except Exception as e:
@@ -117,7 +177,9 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 st.title("🚦 Светофор по клиентской базе")
+st.caption(f"<small>{bg_msg}</small>", unsafe_allow_html=True)
 
+# ── AI chat popover ──
 with st.popover("💬 Чат с ИИ", use_container_width=True):
     st.caption("Спрашивайте о клиентах, критериях и результатах")
     if "chat_history" not in st.session_state:
@@ -267,42 +329,96 @@ with tab_main:
         st.rerun()
 
     if total > 0:
-        ma, mb, mc = st.columns(3)
-        ma.metric("🟢 Зеленые", counts.get("green", 0), border=True)
-        mb.metric("🟡 Желтые", counts.get("yellow", 0), border=True)
-        mc.metric("🔴 Красные", counts.get("red", 0), border=True)
+        # ── Color filter buttons ──
+        col_g, col_y, col_r = st.columns(3)
+        active_filter = st.session_state.get("_color_filter", None)
 
-        # cache ALL data in session — refreshes only after ETL/recalc
+        def _click_filter(color):
+            cur = st.session_state.get("_color_filter", None)
+            st.session_state["_color_filter"] = None if cur == color else color
+        for col, color, label, cnt in [
+            (col_g, "green", "Зеленый", counts.get("green", 0)),
+            (col_y, "yellow", "Желтый", counts.get("yellow", 0)),
+            (col_r, "red", "Красный", counts.get("red", 0)),
+        ]:
+            is_active = active_filter == color
+            bg = COLOR_HEX.get(color, "#ccc")
+            txt = "#fff" if color == "red" else "#333"
+            active_cls = "active" if is_active else ""
+            col.markdown(
+                f"<div class='color-btn {active_cls}' style='background:{bg};color:{txt}' "
+                f"onclick='alert(\"streamlit filter\")'>{label}: {cnt}</div>",
+                unsafe_allow_html=True,
+            )
+            if col.button(f"{label}: {cnt}", key=f"cf_{color}", use_container_width=True,
+                          type="primary" if is_active else "secondary"):
+                _click_filter(color)
+                st.rerun()
+
+        # ── Cache data ──
         if "_cache" not in st.session_state or st.session_state.pop("_refresh", False):
             cdf, ccrit, cdm = load_traffic_data()
             st.session_state["_cache"] = (cdf, ccrit, cdm)
         df, crit_cols, details_map = st.session_state["_cache"]
 
         if not df.empty:
-            flt1, flt2 = st.columns([1, 1])
+            # ── Filters row ──
+            flt1, flt2, flt3, flt4, flt5 = st.columns([2, 2, 2, 1, 1])
+
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
                 color_opts = ["Все", "green", "yellow", "red"]
+                if active_filter:
+                    color_opts = [active_filter]
                 selected_color = st.selectbox("Зона", color_opts,
                     format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
                     key="col_f", label_visibility="collapsed")
+            with flt3:
+                show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge", label_visibility="collapsed")
+                st.caption("На грани ухудшения")
+            with flt4:
+                show_improved = st.checkbox("🟢↑ Улучшились", key="show_improved", label_visibility="collapsed")
+            with flt5:
+                show_worsened = st.checkbox("🔴↓ Ухудшились", key="show_worsened", label_visibility="collapsed")
 
             fdf = df.copy()
+
+            # ── "На грани ухудшения" filter ──
+            if show_on_verge:
+                def is_on_verge(row):
+                    crit = row["_crit_bad"]
+                    aux = row["_aux_bad"]
+                    color = row["_color"]
+                    if color == "green":
+                        return aux == 1
+                    if color == "yellow":
+                        return (crit >= 1 and aux == 1) or (crit == 0 and aux == 2)
+                    return False
+                fdf = fdf[fdf.apply(is_on_verge, axis=1)]
+
+            # ── Trend filters ──
+            if show_improved:
+                fdf = fdf[fdf["Тренд"] == "🟢↑"]
+            if show_worsened:
+                fdf = fdf[fdf["Тренд"] == "🔴↓"]
+
             if selected_manager != "Все":
                 fdf = fdf[fdf["Менеджер"] == selected_manager]
-            if selected_color != "Все":
+            if selected_color != "Все" and not active_filter:
                 fdf = fdf[fdf["_color"] == selected_color]
+            elif active_filter and selected_color == "Все":
+                fdf = fdf[fdf["_color"] == active_filter]
 
-            display_cols = ["Клиент", "Менеджер", "Окончание",
-                            "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Неп.док",
+            # ── Display columns with trend ──
+            display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
+                            "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы",
                             "Крит", "Вспом"]
 
-            styled = fdf[display_cols].style.apply(lambda row: render_color_row_2(row, fdf), axis=1)
+            styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
 
-            # DataFrame (without on_select — стабильно, без зависаний)
-            st.dataframe(styled, use_container_width=True, height=680)
+            st.dataframe(styled, use_container_width=True, height=560)
 
             # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
@@ -319,7 +435,7 @@ with tab_main:
                     sel_crit_name = crit_cols[sel_col_key][1]
                     sel_reasoning = details_map.get(sel_client, {}).get(sel_crit_name, {}).get("reasoning", "")
 
-            # ── Cell info panel (сразу под критерием) ──
+            # ── Cell info panel ──
             if sel_client and sel_crit_name and sel_reasoning:
                 st.markdown(
                     f"<div class='cell-info'><b>🔍 {sel_client} → {sel_crit_name}</b><br>"
@@ -354,16 +470,89 @@ with tab_main:
             csv = fdf.to_csv(index=False).encode("utf-8-sig")
             st.download_button("⬇️ CSV", csv, "svetofor.csv", "text/csv", use_container_width=True)
 
+            # ── Charts ──
             st.divider()
-            pie_fig = px.pie(
-                names=["Зеленый", "Желтый", "Красный"],
-                values=[counts.get("green", 0), counts.get("yellow", 0), counts.get("red", 0)],
-                color=["Зеленый", "Желтый", "Красный"],
-                color_discrete_map={"Зеленый": "#2ecc71", "Желтый": "#f1c40f", "Красный": "#e74c3c"},
-                title="Распределение", height=300,
-            )
-            pie_fig.update_traces(textinfo="label+percent+value")
-            st.plotly_chart(pie_fig, use_container_width=True)
+            chart_col1, chart_col2 = st.columns(2)
+
+            with chart_col1:
+                pie_fig = px.pie(
+                    names=["Зеленый", "Желтый", "Красный"],
+                    values=[counts.get("green", 0), counts.get("yellow", 0), counts.get("red", 0)],
+                    color=["Зеленый", "Желтый", "Красный"],
+                    color_discrete_map={"Зеленый": "#2ecc71", "Желтый": "#f1c40f", "Красный": "#e74c3c"},
+                    title="Распределение по цветам", height=400,
+                )
+                pie_fig.update_traces(textinfo="label+percent+value")
+                st.plotly_chart(pie_fig, use_container_width=True)
+
+            with chart_col2:
+                conn2 = get_conn()
+                violation_data = []
+                crit_query = [
+                    ("Событие 1 раз в квартал", "crit_event_quarter"),
+                    ("Жалобы (3 мес)", "crit_no_complaints"),
+                    ("Наряды (отклонен)", "crit_no_rejected_orders"),
+                    ("Событие за 2 мес", "crit_event_before_end"),
+                    ("Счет на продление", "crit_invoice_before_end"),
+                    ("Неподписанные док-ты", "crit_no_unsigned_docs"),
+                ]
+                for cname, ccol in crit_query:
+                    cur = conn2.execute(f"SELECT COUNT(*) as cnt FROM traffic_light_results WHERE {ccol}=0")
+                    cnt = cur.fetchone()["cnt"]
+                    violation_data.append({"Критерий": cname, "Нарушений": cnt})
+                conn2.close()
+
+                vdf = pd.DataFrame(violation_data)
+                bar_fig = px.bar(vdf, x="Критерий", y="Нарушений",
+                                 title="Сколько клиентов нарушают критерий",
+                                 color="Нарушений", color_continuous_scale="Reds",
+                                 height=400)
+                bar_fig.update_xaxes(tickangle=45)
+                st.plotly_chart(bar_fig, use_container_width=True)
+
+            # ── Transition chart ──
+            st.divider()
+            st.subheader("📈 Статистика переходов между категориями")
+            periods, trans_data = get_transitions()
+            if len(periods) >= 2:
+                tdf = pd.DataFrame({
+                    "Неделя": periods,
+                    "🟢 Зеленый": trans_data["green"],
+                    "🟡 Желтый": trans_data["yellow"],
+                    "🔴 Красный": trans_data["red"],
+                })
+                trans_fig = px.line(tdf, x="Неделя",
+                                    y=["🟢 Зеленый", "🟡 Желтый", "🔴 Красный"],
+                                    title="Динамика по неделям",
+                                    color_discrete_map={
+                                        "🟢 Зеленый": "#2ecc71",
+                                        "🟡 Желтый": "#f1c40f",
+                                        "🔴 Красный": "#e74c3c",
+                                    },
+                                    markers=True, height=400)
+                st.plotly_chart(trans_fig, use_container_width=True)
+
+                # Transitions summary
+                prev_period = periods[-2]
+                cur_period = periods[-1]
+                conn3 = get_conn()
+                cur = conn3.execute("""
+                    SELECT s1.final_color as prev_color, s2.final_color as cur_color, COUNT(*) as cnt
+                    FROM traffic_light_snapshots s1
+                    JOIN traffic_light_snapshots s2 ON s1.client_name = s2.client_name
+                    WHERE s1.period_label = ? AND s2.period_label = ?
+                    GROUP BY s1.final_color, s2.final_color
+                """, (prev_period, cur_period))
+                trans_rows = cur.fetchall()
+                conn3.close()
+                if trans_rows:
+                    st.caption("Переходы за последнюю неделю:")
+                    trans_info = []
+                    for tr in trans_rows:
+                        trans_info.append(f"{COLOR_LABEL.get(tr['prev_color'], '?')} → {COLOR_LABEL.get(tr['cur_color'], '?')}: {tr['cnt']}")
+                    st.markdown(" | ".join(trans_info))
+            else:
+                st.info("Данные о переходах будут доступны после нескольких расчетов светофора.")
     else:
         st.info("Данные не загружены. Используйте вкладки загрузки.")
 
@@ -373,8 +562,8 @@ with tab_info:
 | Критерий | Тип | Описание |
 |----------|-----|----------|
 | **Событие 1 раз в квартал** | 🔴 Критичный | Есть завершенное/перенесенное событие в любом из 3 месяцев |
-| **Событие за 2 мес до окончания** | 🔴 Критичный | Есть событие (только для договоров за 30-90 дней до конца) |
-| **Счет на продление за 2 мес** | 🔴 Критичный | Выставлен счет (только для договоров за 30-90 дней до конца) |
+| **Событие за 2 мес до окончания** | 🔴 Критичный | Есть событие (только для договоров с окончанием ≤ 67 дней) |
+| **Счет на продление за 2 мес** | 🔴 Критичный | Выставлен счет (только для договоров с окончанием ≤ 67 дней) |
 | **Отсутствие жалоб за 3 мес** | 🟡 Вспомогательный | Клиента нет в списке жалоб |
 | **Отсутствие нарядов (отклонен)** | 🟡 Вспомогательный | Нет нарядов со статусом "Отклонен клиентом" |
 | **Отсутствие неподписанных док-тов** | 🟡 Вспомогательный | Все документы подписаны или сданы в расчетный отдел |
@@ -383,5 +572,5 @@ with tab_info:
     st.markdown("""
 - 🟢 **Зеленый**: 0 критичных, < 2 вспомогательных
 - 🟡 **Желтый**: 1+ критичных ИЛИ 2+ вспомогательных
-- 🔴 **Красный**: 1+ критичных + 2+ вспомогательных ИЛИ 3+ вспомогательных
+- 🔴 **Красный**: 2+ критичных ИЛИ 1+ критичных + 2+ вспомогательных ИЛИ 3+ вспомогательных
     """)

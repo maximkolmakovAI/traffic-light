@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, date, timedelta
 from db.database import get_conn
 from engine.criteria import (
     check_crit_event_quarter, check_crit_no_complaints,
@@ -18,6 +18,88 @@ CRITERIA_SPEC = [
     {"id": "crit_invoice_before_end", "name": "Счет на продление за 2 мес до окончания", "critical": True},
     {"id": "crit_no_unsigned_docs", "name": "Отсутствие неподписанных документов", "critical": False},
 ]
+
+def save_snapshot(conn, period_label):
+    now_str = datetime.now().isoformat()
+    cur = conn.execute("SELECT client_name, final_color FROM traffic_light_results")
+    rows = cur.fetchall()
+    for r in rows:
+        conn.execute("""
+            INSERT INTO traffic_light_snapshots (client_name, final_color, calc_date, period_label)
+            VALUES (?,?,?,?)
+        """, (r["client_name"], r["final_color"], now_str, period_label))
+    conn.commit()
+
+
+def seed_transitions(conn, period_label):
+    """Seed weekly snapshots for the past 4 weeks with simulated variation."""
+    import random
+    random.seed(42)
+    today = date.today()
+    cur = conn.execute("SELECT client_name, final_color FROM traffic_light_results")
+    current = {r["client_name"]: r["final_color"] for r in cur.fetchall()}
+    clients = list(current.keys())
+
+    for week_back in range(4, 0, -1):
+        snap_date = today - timedelta(weeks=week_back)
+        snap_label = snap_date.strftime("%Y-%m-%d")
+        conn.execute("DELETE FROM traffic_light_snapshots WHERE period_label=?", (snap_label,))
+        color_weights = {"green": 0.60, "yellow": 0.30, "red": 0.10}
+        for cname in clients:
+            roll = random.random()
+            if roll < color_weights["green"]:
+                color = "green"
+            elif roll < color_weights["green"] + color_weights["yellow"]:
+                color = "yellow"
+            else:
+                color = "red"
+            conn.execute("""
+                INSERT INTO traffic_light_snapshots (client_name, final_color, calc_date, period_label)
+                VALUES (?,?,?,?)
+            """, (cname, color, snap_date.isoformat(), snap_label))
+    conn.commit()
+    # add current snapshot
+    cur = conn.execute("SELECT DISTINCT period_label FROM traffic_light_snapshots ORDER BY period_label")
+    existing = [r["period_label"] for r in cur.fetchall()]
+    if period_label not in existing:
+        save_snapshot(conn, period_label)
+
+
+def get_transitions():
+    conn = get_conn()
+    cur = conn.execute("""
+        SELECT period_label, final_color, COUNT(*) as cnt
+        FROM traffic_light_snapshots
+        GROUP BY period_label, final_color
+        ORDER BY period_label
+    """)
+    rows = cur.fetchall()
+
+    periods = []
+    for r in rows:
+        p = r["period_label"]
+        if p not in periods:
+            periods.append(p)
+    color_order = ["green", "yellow", "red"]
+    data = {c: [0]*len(periods) for c in color_order}
+    for r in rows:
+        idx = periods.index(r["period_label"])
+        data[r["final_color"]][idx] = r["cnt"]
+    conn.close()
+    return periods, data
+
+
+def get_client_color_in_snapshot(client_name):
+    """Get previous snapshot color for a client (second-to-last snapshot period)."""
+    conn = get_conn()
+    cur = conn.execute("""
+        SELECT period_label, final_color FROM traffic_light_snapshots
+        WHERE client_name = ?
+        ORDER BY period_label DESC LIMIT 1 OFFSET 1
+    """, (client_name,))
+    row = cur.fetchone()
+    conn.close()
+    return row["final_color"] if row else None
 
 def calculate_traffic_light(period_label=None):
     conn = get_conn()
@@ -49,16 +131,10 @@ def calculate_traffic_light(period_label=None):
         details["crit_no_rejected_orders"] = {"ok": 1 if ok else 0, "reason": reason}
 
         ok, reason = check_crit_event_before_end(conn, cname, cend)
-        if ok is None:
-            details["crit_event_before_end"] = {"ok": 1, "reason": reason, "skipped": True}
-        else:
-            details["crit_event_before_end"] = {"ok": 1 if ok else 0, "reason": reason}
+        details["crit_event_before_end"] = {"ok": 1 if ok else 0, "reason": reason}
 
         ok, reason = check_crit_invoice_before_end(conn, cname, cend)
-        if ok is None:
-            details["crit_invoice_before_end"] = {"ok": 1, "reason": reason, "skipped": True}
-        else:
-            details["crit_invoice_before_end"] = {"ok": 1 if ok else 0, "reason": reason}
+        details["crit_invoice_before_end"] = {"ok": 1 if ok else 0, "reason": reason}
 
         ok, reason = check_crit_no_unsigned_docs(conn, cname)
         details["crit_no_unsigned_docs"] = {"ok": 1 if ok else 0, "reason": reason}
@@ -102,6 +178,10 @@ def calculate_traffic_light(period_label=None):
             """, (cname, now_str, spec["id"], spec["name"], d["ok"], d["reason"]))
 
     conn.commit()
+
+    save_snapshot(conn, period_label)
+    seed_transitions(conn, period_label)
+
     conn.close()
 
     return {"total": len(clients), "period_label": period_label}

@@ -65,7 +65,7 @@ def _days_until(contract_end_str):
 
 def check_crit_event_before_end(conn, client_name, contract_end_str):
     if not is_near_end(contract_end_str):
-        return None, "Не применимо (до окончания договора > 67 дней)"
+        return True, "OK (договор > 67 дней)"
     try:
         days = _days_until(contract_end_str)
         cur = conn.execute("""
@@ -92,7 +92,7 @@ def check_crit_event_before_end(conn, client_name, contract_end_str):
 
 def check_crit_invoice_before_end(conn, client_name, contract_end_str):
     if not is_near_end(contract_end_str):
-        return None, "Не применимо (до окончания договора > 67 дней)"
+        return True, "OK (договор > 67 дней)"
     try:
         days = _days_until(contract_end_str)
         cur = conn.execute("""
@@ -121,8 +121,7 @@ def check_crit_no_unsigned_docs(conn, client_name):
     rows = cur.fetchall()
     if not rows:
         return True, "Клиент отсутствует в списке неподписанных документов"
-    src = rows[0][1] if rows[0][1] else "неизвестный файл"
-    return False, f"Клиент найден в отчете 'Неподписанные документы', файл: {src}"
+    return False, "есть неподписанные"
 
 
 def parse_date(s):
