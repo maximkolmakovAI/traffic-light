@@ -502,7 +502,6 @@ with tab_main:
                           key=f"cf_{color}", use_container_width=True,
                           type="primary" if is_active else "secondary"):
                 st.session_state["col_f"] = "Все" if is_active else color
-                st.rerun()
 
         # ── Cache data ──
         if "_cache" not in st.session_state or st.session_state.pop("_refresh", False):
@@ -524,6 +523,8 @@ with tab_main:
             with flt3:
                 show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
+                if st.session_state.get("trend_f") not in ("all", "up", "down"):
+                    st.session_state["trend_f"] = "all"
                 trend_filter = st.radio("Тренд:", ["all", "up", "down"],
                     format_func=lambda x: {"all": "Все", "up": "🟢↑ Улучшились", "down": "🔴↓ Ухудшились"}[x],
                     horizontal=True, key="trend_f", label_visibility="collapsed")
