@@ -204,6 +204,7 @@ st.markdown(f"""
 # Mascot: SVG pixel cat with CSS animations (legs, tail, head, yawn)
 st.markdown("""
 <div class="mascot" id="mascot-cat">
+<div id="cat-svg">
 <svg class="pixel-cat-svg" viewBox="0 0 60 60" width="64" height="64">
 <style>
   .pixel-cat-svg { overflow:visible; }
@@ -253,6 +254,8 @@ st.markdown("""
 <rect class="stripe" x="35" y="36" width="3" height="6" rx="1.5" fill="#E65100"/>
 </svg>
 </div>
+<span id="cat-sleep" style="display:none;font-size:64px;line-height:1;"></span>
+</div>
 """, unsafe_allow_html=True)
 # JS enhancement for idle detection (if script executes, overrides CSS positioning)
 st.markdown("""
@@ -262,6 +265,8 @@ if (!window.__catInit) {
   (function() {
     var cat = document.getElementById('mascot-cat');
     if (!cat) return;
+    var svgEl = document.getElementById('cat-svg');
+    var sleepEl = document.getElementById('cat-sleep');
     var idleTimer = null, isSleeping = false, dir = 1;
     function stopCSS() {
       cat.style.animation = 'none';
@@ -287,14 +292,17 @@ if (!window.__catInit) {
         setTimeout(function(){
           cat.style.transition = 'all 0.8s ease';
           cat.style.opacity = '0.8';
-          cat.textContent = String.fromCodePoint(0x1F634);
+          svgEl.style.display = 'none';
+          sleepEl.style.display = 'inline';
+          sleepEl.textContent = String.fromCodePoint(0x1F634);
         },2500);
       },2500);
     }
     function wake() {
       if (!isSleeping) return;
       isSleeping = false;
-      cat.textContent = String.fromCodePoint(0x1F408);
+      svgEl.style.display = '';
+      sleepEl.style.display = 'none';
       cat.style.opacity = '1';
       cat.style.animation = '';
       cat.style.transition = 'all 0.6s cubic-bezier(0.34,1.56,0.64,1)';
