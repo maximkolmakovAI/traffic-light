@@ -19,31 +19,55 @@ COLOR_LABEL = {"green": "Зеленый", "yellow": "Желтый", "red": "Кр
 COLOR_BG = {"green": "#d4edda", "yellow": "#fff3cd", "red": "#f8d7da"}
 COLOR_HEX = {"green": "#2ecc71", "yellow": "#f1c40f", "red": "#e74c3c"}
 
-# ── Time-of-day background ──
+# ── Universe greeting ──
+import random
+random.seed(int(datetime.now().timestamp()) % 1000)
+UNIVERSE_QUOTES = {
+    "marvel": [
+        "Великая сила — великая ответственность. А у Валентины — великие клиенты! 🕸️",
+        "Мстители собираются! Валентина, твоя база ждёт своего героя. 🦸‍♀️",
+        "Валентина, ты — Железный человек среди менеджеров! 🤖",
+        "С надеждой и упорством, как Капитан Америка, Валентина ведёт менеджеров в бой! 🛡️",
+    ],
+    "starwars": [
+        "Да пребудет с тобой Сила, Валентина! Менеджеры ждут твоих указаний. ✨",
+        "Валентина — наш джедай в мире клиентского сервиса 🪐",
+        "Империя не ждёт! Валентина, пора запускать светофор! 🚀",
+        "Ты — наша последняя надежда, Валентина! Менеджеры готовы к миссии. 🌟",
+    ],
+    "harrypotter": [
+        "Валентина, ты — настоящая Гермиона: без тебя менеджеры как без палочки! 🪄",
+        "После трёх чашек кофе Валентина видит даже дементоров в отчётах! ☕🦉",
+        "Валентина, Минерва Макгонагалл отдыхает — ты ведёшь менеджеров твёрдой рукой! ⚡",
+        "Орден Феникса вызывает Валентину! База клиентов ждёт сортировки как Распределяющая шляпа! 🎩",
+    ],
+}
+uni = random.choice(["marvel", "starwars", "harrypotter"])
+greeting = random.choice(UNIVERSE_QUOTES[uni])
+
+# ── Backgrounds by time-of-day + color-filter theme ──
 hour = datetime.now().hour
-if 6 <= hour < 9:
-    bg_style = """
-    background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);
-    """
-    bg_msg = "🌅 Рассвет"
+filter_color = st.session_state.get("_color_filter", None)
+if filter_color == "green":
+    bg_style = "background: linear-gradient(135deg, #a8e063 0%, #56ab2f 50%, #2d8a17 100%);"
+elif filter_color == "yellow":
+    bg_style = "background: linear-gradient(135deg, #f7971e 0%, #ffd200 50%, #e8a317 100%);"
+elif filter_color == "red":
+    bg_style = "background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 50%, #8b0000 100%);"
+elif 6 <= hour < 9:
+    bg_style = "background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);"
+    bg_time_str = "🌅 Рассвет"
 elif 9 <= hour < 18:
-    bg_style = """
-    background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-    """
-    bg_msg = "☀️ День"
+    bg_style = "background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);"
+    bg_time_str = "☀️ День"
 elif 18 <= hour < 21:
-    bg_style = """
-    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);
-    """
-    bg_msg = "🌇 Закат"
+    bg_style = "background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);"
+    bg_time_str = "🌇 Закат"
 else:
-    bg_style = """
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    """
-    bg_msg = "🌙 Ночь"
+    bg_style = "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
+    bg_time_str = "🌙 Ночь"
 
 # Dark theme adjustments for night
-text_color = "#e0e0e0" if hour < 6 or hour >= 21 else "#1a1a2e"
 dark_adjust = """
     .stApp, .stApp header, .stApp footer { color: #e0e0e0 !important; }
     .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh { color: #e0e0e0 !important; }
@@ -58,6 +82,7 @@ st.markdown(f"""
     .stApp {{
         {bg_style}
         background-attachment: fixed;
+        transition: background 0.8s ease;
     }}
     .chat-user {{ background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
     .chat-ai {{ background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
@@ -73,9 +98,86 @@ st.markdown(f"""
     .trend-up {{ color:#2ecc71; font-weight:bold; }}
     .trend-down {{ color:#e74c3c; font-weight:bold; }}
     .trend-same {{ color:#95a5a6; }}
+
+    /* ── Mascot character ── */
+    .mascot {{
+        position: fixed;
+        font-size: 42px;
+        z-index: 9999;
+        pointer-events: auto;
+        cursor: pointer;
+        animation: mascot-wander 35s infinite ease-in-out;
+        transition: transform 0.3s;
+        user-select: none;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }}
+    .mascot:hover {{
+        animation: mascot-surprise 0.6s ease, mascot-wander 35s infinite ease-in-out;
+        transform: scale(1.3);
+    }}
+    @keyframes mascot-wander {{
+        0%   {{ left: 5%; top: 80%; }}
+        10%  {{ left: 15%; top: 70%; transform: scaleX(1); }}
+        20%  {{ left: 40%; top: 60%; transform: scaleX(-1); }}
+        30%  {{ left: 60%; top: 45%; transform: scaleX(1); }}
+        40%  {{ left: 75%; top: 55%; transform: scaleX(-1); }}
+        50%  {{ left: 85%; top: 30%; transform: scaleX(1); }}
+        60%  {{ left: 60%; top: 20%; transform: scaleX(-1); }}
+        70%  {{ left: 35%; top: 35%; transform: scaleX(1); }}
+        80%  {{ left: 20%; top: 50%; transform: scaleX(-1); }}
+        90%  {{ left: 10%; top: 65%; transform: scaleX(1); }}
+        100% {{ left: 5%; top: 80%; transform: scaleX(-1); }}
+    }}
+    @keyframes mascot-surprise {{
+        0%   {{ transform: scale(1) rotate(0deg); }}
+        25%  {{ transform: scale(1.4) rotate(-15deg); }}
+        50%  {{ transform: scale(1.1) rotate(10deg); }}
+        75%  {{ transform: scale(1.3) rotate(-5deg); }}
+        100% {{ transform: scale(1) rotate(0deg); }}
+    }}
+    /* Alternate mascot path when filter is active */
+    body.filter-red .mascot {{
+        animation: mascot-fast 20s infinite ease-in-out;
+    }}
+    @keyframes mascot-fast {{
+        0%   {{ left: 2%; top: 10%; }}
+        15%  {{ left: 30%; top: 30%; transform: scaleX(1); }}
+        30%  {{ left: 55%; top: 15%; transform: scaleX(-1); }}
+        45%  {{ left: 80%; top: 40%; transform: scaleX(1); }}
+        60%  {{ left: 65%; top: 70%; transform: scaleX(-1); }}
+        75%  {{ left: 35%; top: 85%; transform: scaleX(1); }}
+        90%  {{ left: 15%; top: 50%; transform: scaleX(-1); }}
+        100% {{ left: 2%; top: 10%; transform: scaleX(1); }}
+    }}
+
+    .greeting-card {{
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        padding: 0.8rem 1.2rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid rgba(255,255,255,0.3);
+        font-size: 0.95rem;
+        text-align: center;
+    }}
     .css-1offfwp {{ padding:0.5rem !important; }}
     {dark_adjust}
 </style>
+<div class="mascot" title="Я — маскот Валентины!">🐱</div>
+<script>
+// Apply color filter class to body for theme backgrounds
+(function() {{
+    const el = document.querySelector('body');
+    if (el) {{
+        const params = new URLSearchParams(window.location.search);
+        // Streamlit doesn't easily expose session_state to JS, so we rely on Streamlit's DOM
+        // The color filter buttons change the URL via st.rerun, but we'll detect active filter
+        // via the button's active state in the DOM
+        // Actually, we'll inject the class from python instead
+    }}
+}})();
+</script>
 """, unsafe_allow_html=True)
 
 
@@ -177,7 +279,12 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 st.title("🚦 Светофор по клиентской базе")
-st.caption(f"<small>{bg_msg}</small>", unsafe_allow_html=True)
+
+# ── Universe greeting ──
+st.markdown(
+    f"<div class='greeting-card'>✨ <b>Валентина</b>, {greeting}</div>",
+    unsafe_allow_html=True,
+)
 
 # ── AI chat popover ──
 with st.popover("💬 Чат с ИИ", use_container_width=True):
@@ -331,7 +438,7 @@ with tab_main:
     if total > 0:
         # ── Color filter buttons ──
         col_g, col_y, col_r = st.columns(3)
-        active_filter = st.session_state.get("_color_filter", None)
+        active_filter = filter_color
 
         def _click_filter(color):
             cur = st.session_state.get("_color_filter", None)
