@@ -99,24 +99,47 @@ st.markdown(f"""
     .trend-down {{ color:#e74c3c; font-weight:bold; }}
     .trend-same {{ color:#95a5a6; }}
 
-    /* ── Mascot styles (base, movement via JS) ── */
+    /* ── Mascot styles (pure CSS, no JS needed) ── */
     .mascot {{
         position: fixed;
-        font-size: 42px;
+        font-size: 64px;
+        line-height: 1;
         z-index: 9999;
         pointer-events: none;
         user-select: none;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        will-change: left, top;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        image-rendering: pixelated;
+        animation: mascot-cycle 56s infinite ease-in-out;
     }}
-    .mascot.idle {{
-        transition: all 2.5s cubic-bezier(0.6, 0, 0.4, 1);
+    @keyframes mascot-cycle {{
+        /* wandering */
+        0%   {{ left:3%; top:82%; transform:scaleX(1) translateY(0); opacity:1; }}
+        7%   {{ left:12%; top:72%; transform:scaleX(1) translateY(-2px); opacity:1; }}
+        14%  {{ left:35%; top:60%; transform:scaleX(-1) translateY(0); opacity:1; }}
+        21%  {{ left:58%; top:48%; transform:scaleX(-1) translateY(-2px); opacity:1; }}
+        28%  {{ left:75%; top:55%; transform:scaleX(1) translateY(0); opacity:1; }}
+        35%  {{ left:88%; top:32%; transform:scaleX(1) translateY(-2px); opacity:1; }}
+        42%  {{ left:65%; top:18%; transform:scaleX(-1) translateY(0); opacity:1; }}
+        49%  {{ left:40%; top:12%; transform:scaleX(-1) translateY(-1px); opacity:1; }}
+        /* climb to filter block */
+        56%  {{ left:18%; top:5%; transform:scaleX(1) translateY(0); opacity:1; }}
+        /* rest on filter block */
+        70%  {{ left:18%; top:5.5%; transform:scaleX(1) rotate(2deg); opacity:0.85; }}
+        84%  {{ left:18%; top:5%; transform:scaleX(1) rotate(-2deg); opacity:0.8; }}
+        /* wake and start wandering */
+        91%  {{ left:8%; top:30%; transform:scaleX(-1) translateY(0); opacity:1; }}
+        100% {{ left:3%; top:82%; transform:scaleX(1) translateY(0); opacity:1; }}
     }}
-    .mascot.sleeping {{
-        transition: all 0.8s ease;
-        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
-        opacity: 0.85;
+    .mascot:hover {{
+        animation: mascot-surprise 0.6s ease;
+        transform:scale(1.3) !important;
+    }}
+    @keyframes mascot-surprise {{
+        0%   {{ transform:scale(1) rotate(0deg); }}
+        25%  {{ transform:scale(1.4) rotate(-12deg); }}
+        50%  {{ transform:scale(1.1) rotate(8deg); }}
+        75%  {{ transform:scale(1.3) rotate(-5deg); }}
+        100% {{ transform:scale(1) rotate(0deg); }}
     }}
 
 
@@ -132,96 +155,116 @@ st.markdown(f"""
         text-align: center;
     }}
     .css-1offfwp {{ padding:0.5rem !important; }}
+    /* ── Table full-width + compact cells ── */
+    .main > div {{ max-width:100% !important; padding-left:0.3rem !important; padding-right:0.3rem !important; }}
+    .block-container {{ padding:0.5rem 0.3rem !important; max-width:100% !important; }}
+    [data-testid="column"] > div > div > div > div > div > div[data-testid="stDataFrame"] > div {{
+        width:100% !important;
+    }}
+    [data-testid="stDataFrame"] table {{
+        width:100% !important; table-layout:fixed !important;
+    }}
+    [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {{
+        padding:1px 3px !important; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }}
+    /* narrow columns for short criteria names */
+    [data-testid="stDataFrame"] th:nth-child(5),
+    [data-testid="stDataFrame"] th:nth-child(8) {{
+        max-width:55px !important; width:55px !important;
+    }}
+    [data-testid="stDataFrame"] td:nth-child(5),
+    [data-testid="stDataFrame"] td:nth-child(8) {{
+        max-width:55px !important; width:55px !important;
+    }}
+    [data-testid="stDataFrame"] th:nth-child(6),
+    [data-testid="stDataFrame"] th:nth-child(7),
+    [data-testid="stDataFrame"] th:nth-child(9),
+    [data-testid="stDataFrame"] th:nth-child(10) {{
+        max-width:40px !important; width:40px !important;
+    }}
+    [data-testid="stDataFrame"] td:nth-child(6),
+    [data-testid="stDataFrame"] td:nth-child(7),
+    [data-testid="stDataFrame"] td:nth-child(9),
+    [data-testid="stDataFrame"] td:nth-child(10) {{
+        max-width:40px !important; width:40px !important;
+    }}
+    [data-testid="stDataFrame"] th:nth-child(11),
+    [data-testid="stDataFrame"] th:nth-child(12) {{
+        max-width:35px !important; width:35px !important;
+    }}
+    [data-testid="stDataFrame"] td:nth-child(11),
+    [data-testid="stDataFrame"] td:nth-child(12) {{
+        max-width:35px !important; width:35px !important;
+    }}
+    /* Client name column gets more space */
+    [data-testid="stDataFrame"] th:nth-child(2) {{ min-width:120px !important; }}
+    [data-testid="stDataFrame"] td:nth-child(2) {{ min-width:120px !important; }}
     {dark_adjust}
 </style>
 """, unsafe_allow_html=True)
 
-# Mascot HTML+JS (emoji via unicode escapes to avoid UnicodeEncodeError on Py3.14)
-CAT_EMOJI = chr(0x1F431)  # 🐱
+# Mascot: pure CSS pixel cat (no emoji encoding issues on Py3.14)
+CAT_CHAR = chr(0x1F408)  # 🐈 full body cat
 st.markdown(
-    '<div class="mascot" id="mascot-cat">' + CAT_EMOJI + '</div>',
+    '<div class="mascot" id="mascot-cat">' + CAT_CHAR + '</div>',
     unsafe_allow_html=True,
 )
+# JS enhancement for idle detection (if script executes, overrides CSS positioning)
 st.markdown("""
 <script>
-(function() {
-  if (window.__catInit) return;
+if (!window.__catInit) {
   window.__catInit = true;
-
-  const cat = document.getElementById('mascot-cat');
-  if (!cat) return;
-  let idleTimer = null;
-  let isSleeping = false;
-  let currentDir = 1;
-
-  function randomWalk() {
-    if (isSleeping) return;
-    cat.style.transition = 'all 1.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    cat.style.left = (Math.random() * 75 + 2) + '%';
-    cat.style.top = (Math.random() * 65 + 20) + '%';
-    if (Math.random() > 0.5) { currentDir *= -1; }
-    cat.style.transform = 'scaleX(' + currentDir + ')';
-    cat.classList.remove('idle', 'sleeping');
-    setTimeout(randomWalk, 2000 + Math.random() * 3000);
-  }
-
-  var SLEEP = String.fromCodePoint(0x1F634);
-  var AWAKE = String.fromCodePoint(0x1F431);
-
-  function climbAndSleep() {
-    if (isSleeping) return;
-    isSleeping = true;
-    cat.classList.add('idle');
-    cat.style.transition = 'all 2.5s cubic-bezier(0.6, 0, 0.4, 1)';
-
-    cat.style.left = '45%';
-    cat.style.top = '75%';
-    cat.style.transform = 'scaleX(1)';
-
-    setTimeout(function() {
-      cat.style.left = '25%';
-      cat.style.top = '6%';
-      cat.style.transform = 'scaleX(1) rotate(0deg)';
-
-      setTimeout(function() {
-        cat.classList.add('sleeping');
-        cat.classList.remove('idle');
-        cat.style.transition = 'all 1.2s ease';
-        cat.style.left = '22%';
-        cat.style.top = '4%';
-        cat.style.transform = 'scaleX(1) rotate(4deg)';
-        cat.textContent = SLEEP;
-      }, 2500);
-    }, 2500);
-  }
-
-  function wakeUp() {
-    if (!isSleeping) return;
-    isSleeping = false;
-    cat.textContent = AWAKE;
-    cat.classList.remove('idle', 'sleeping');
-    cat.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    cat.style.transform = 'scaleX(1) rotate(0deg)';
-    cat.style.left = (Math.random() * 70 + 10) + '%';
-    cat.style.top = (Math.random() * 50 + 30) + '%';
-    setTimeout(randomWalk, 800);
-  }
-
-  function onUserAction() {
-    if (isSleeping) wakeUp();
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(climbAndSleep, 10000);
-  }
-
-  document.addEventListener('mousemove', onUserAction);
-  document.addEventListener('click', onUserAction);
-  document.addEventListener('scroll', onUserAction);
-
-  cat.style.left = '5%';
-  cat.style.top = '80%';
-  setTimeout(randomWalk, 500);
-  idleTimer = setTimeout(climbAndSleep, 10000);
-})();
+  (function() {
+    var cat = document.getElementById('mascot-cat');
+    if (!cat) return;
+    var idleTimer = null, isSleeping = false, dir = 1;
+    function stopCSS() {
+      cat.style.animation = 'none';
+      cat.style.transition = 'all 1.8s cubic-bezier(0.34,1.56,0.64,1)';
+    }
+    function walk() {
+      if (isSleeping) return;
+      stopCSS();
+      cat.style.left = (Math.random()*75+2)+'%';
+      cat.style.top = (Math.random()*65+20)+'%';
+      if (Math.random()>0.5) dir *= -1;
+      cat.style.transform = 'scaleX('+dir+')';
+      setTimeout(walk, 2500+Math.random()*2500);
+    }
+    function climb() {
+      if (isSleeping) return;
+      isSleeping = true;
+      stopCSS();
+      cat.style.transition = 'all 2.5s cubic-bezier(0.6,0,0.4,1)';
+      cat.style.left = '45%'; cat.style.top = '75%'; cat.style.transform = 'scaleX(1)';
+      setTimeout(function(){
+        cat.style.left = '22%'; cat.style.top = '5%'; cat.style.transform = 'scaleX(1)';
+        setTimeout(function(){
+          cat.style.transition = 'all 0.8s ease';
+          cat.style.opacity = '0.8';
+          cat.textContent = String.fromCodePoint(0x1F634);
+        },2500);
+      },2500);
+    }
+    function wake() {
+      if (!isSleeping) return;
+      isSleeping = false;
+      cat.textContent = String.fromCodePoint(0x1F408);
+      cat.style.opacity = '1';
+      cat.style.animation = '';
+      cat.style.transition = 'all 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+      cat.style.left = (Math.random()*70+10)+'%';
+      cat.style.top = (Math.random()*50+30)+'%';
+      setTimeout(function(){ cat.style.animation = 'none'; walk(); }, 600);
+    }
+    function onAction() { if (isSleeping) wake(); clearTimeout(idleTimer); idleTimer = setTimeout(climb, 10000); }
+    document.addEventListener('mousemove', onAction);
+    document.addEventListener('click', onAction);
+    document.addEventListener('scroll', onAction);
+    setTimeout(walk, 1500);
+    idleTimer = setTimeout(climb, 10000);
+  })();
+}
 </script>
 """, unsafe_allow_html=True)
 
