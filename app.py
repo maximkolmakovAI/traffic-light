@@ -491,17 +491,22 @@ with tab_main:
     if total > 0:
         # ── Color filter buttons (shortcuts that set selectbox) ──
         col_g, col_y, col_r = st.columns(3)
-        cur_color = st.session_state.get("col_f", "Все")
+        # Sync button visual state with selectbox (in case dropdown was used)
+        if st.session_state.get("cf_btn", "Все") != st.session_state.get("col_f", "Все"):
+            st.session_state["cf_btn"] = st.session_state["col_f"]
+        cur_btn = st.session_state.get("cf_btn", "Все")
         for col, color, label, cnt in [
             (col_g, "green", "Зеленый", counts.get("green", 0)),
             (col_y, "yellow", "Желтый", counts.get("yellow", 0)),
             (col_r, "red", "Красный", counts.get("red", 0)),
         ]:
-            is_active = cur_color == color
+            is_active = cur_btn == color
             if col.button(f"{'●' if is_active else '○'} {label}: {cnt}",
                           key=f"cf_{color}", use_container_width=True,
                           type="primary" if is_active else "secondary"):
-                st.session_state["col_f"] = "Все" if is_active else color
+                new_val = "Все" if is_active else color
+                st.session_state["col_f"] = new_val
+                st.session_state["cf_btn"] = new_val
                 st.rerun()
 
         # ── Cache data ──
