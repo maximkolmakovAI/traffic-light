@@ -874,12 +874,6 @@ init_db()
 
 st.title("🚦 Светофор по клиентской базе")
 
-# ── Handle detail link from query param ──
-_qp = st.query_params.get("client")
-if _qp:
-    st.session_state.client_sel = _qp
-    st.query_params.clear()
-
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([2.5, 7.5])
 with th_col1:
@@ -1163,9 +1157,11 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            st.button("📋", key=f"qd_{row['Клиент']}",
+                            st.button("📋", key=f"qd_{i+j}",
                                       use_container_width=True,
-                                      on_click=lambda n=row['Клиент']: st.query_params.update(client=n))
+                                      on_click=lambda n=row['Клиент']: (
+                                          st.session_state.update(client_sel=n) or st.rerun()
+                                      ))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
