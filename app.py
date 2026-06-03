@@ -567,6 +567,44 @@ if theme == "Квантовое ядро":
         background: rgba(255,255,255,0.06) !important;
         border-color: var(--qc-border-hover) !important;
     }
+    /* Popover body – dark background + visible text */
+    div[data-testid="stPopoverBody"] {
+        background: var(--qc-bg2) !important;
+        color: var(--qc-text) !important;
+        padding: 16px !important;
+        border-radius: var(--qc-radius) !important;
+        border: 1px solid var(--qc-border) !important;
+        min-width: 300px !important;
+    }
+    div[data-testid="stPopoverBody"] .stMarkdown,
+    div[data-testid="stPopoverBody"] p,
+    div[data-testid="stPopoverBody"] span,
+    div[data-testid="stPopoverBody"] div,
+    div[data-testid="stPopoverBody"] strong {
+        color: var(--qc-text) !important;
+    }
+    /* Theme selector container – force dark background */
+    .stSelectbox {
+        background: var(--qc-bg2) !important;
+        border-radius: var(--qc-radius-sm) !important;
+    }
+    /* Hide material-symbols fallback text (Expand_more etc.) */
+    span[class*="material"] {
+        font-size: 0 !important;
+        width: 22px !important;
+        height: 22px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    span[class*="material"]::after {
+        content: "▼" !important;
+        font-size: 10px !important;
+        color: var(--qc-text2) !important;
+    }
+    /* Chat input area */
+    div[data-testid="stChatInput"] { background: rgba(255,255,255,0.04) !important; border-radius: var(--qc-radius) !important; border: 1px solid var(--qc-border) !important; }
+    div[data-testid="stChatInput"] input { background: transparent !important; border: none !important; color: var(--qc-text) !important; }
 
     /* ── Dividers ── */
     .st-divider { border-color: var(--qc-border) !important; margin: 1.2rem 0 !important; }
@@ -1099,23 +1137,27 @@ with tab_main:
                             """, unsafe_allow_html=True)
                             c = row['Клиент']
                             with st.popover("📋 Подробнее", use_container_width=True):
-                                st.markdown(f"**{c}**")
-                                st.markdown(f"🗂 {row['Менеджер']}  |  📅 {end_dt}  |  Тренд: {trend_arrow}")
-                                st.markdown(f"Крит: {crit_bad} | Вспом: {aux_bad}")
-                                st.divider()
+                                with st.spinner(""):
+                                    import time
+                                    time.sleep(0.12)
+                                st.markdown(f"**{c}** · {row['Менеджер']} · {end_dt}  {trend_arrow}")
+                                st.markdown(f"Крит: {crit_bad}  ·  Вспом: {aux_bad}")
                                 det = details_map.get(c, {})
                                 for _lb, (_k, _full) in crit_cols.items():
                                     val = str(row.get(_lb, ""))
-                                    status = "✅" if "✅" in val else "❌"
+                                    icon = "✅" if "✅" in val else "❌"
                                     rsn = det.get(_full, {}).get("reasoning", "")
-                                    extra = f" — {rsn}" if rsn else ""
-                                    st.markdown(f"**{_full}**: {status}{extra}")
+                                    line = f"**{icon} {_full}**"
+                                    if rsn:
+                                        line += f"  \n<small>{rsn[:250]}</small>"
+                                    st.markdown(line, unsafe_allow_html=True)
                                 st.divider()
-                                st.markdown("**📈 Анализ:** " + {
+                                analysis = {
                                     "green": "Все критерии в норме, клиент в зелёной зоне.",
                                     "yellow": "Есть невыполненные критерии, требуется внимание.",
-                                    "red": "Критические нарушения, необходимо срочное вмешательство."
-                                }.get(color, ""))
+                                    "red": "Критические нарушения, необходимо срочное вмешательство.",
+                                }.get(color, "")
+                                st.markdown(f"📈 *{analysis}*")
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
