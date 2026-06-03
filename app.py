@@ -105,6 +105,7 @@ st.markdown(f"""
     div[data-testid*="cf_"] button[kind="primary"] {{
         font-weight:bold !important; transform:scale(1.03);
     }}
+    html body span[class*="material"] {{ display: none !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1126,9 +1127,14 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            if st.button("📋 Подробнее", key=f"qd_{row['Клиент']}", use_container_width=True):
-                                st.session_state["client_sel"] = row["Клиент"]
-                                st.rerun()
+                    # Button row BELOW the cards (outside card columns)
+                    btn_cols = st.columns(3)
+                    for j, (_, row) in enumerate(fdf.iloc[i:i+3].iterrows()):
+                        with btn_cols[j]:
+                            st.button("📋 Подробнее",
+                                      key=f"qdb_{row['Клиент']}",
+                                      use_container_width=True,
+                                      on_click=lambda n=row['Клиент']: st.session_state.update(client_sel=n))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
