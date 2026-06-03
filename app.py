@@ -1040,6 +1040,9 @@ with tab_main:
                 fdf = fdf[fdf["_color"] == selected_color]
 
             # ── Display ──
+            display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
+                            "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы",
+                            "Крит", "Вспом"]
             if theme == "Квантовое ядро":
                 for i in range(0, len(fdf), 3):
                     cols = st.columns(3)
