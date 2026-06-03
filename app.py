@@ -589,18 +589,8 @@ if theme == "Квантовое ядро":
         border-radius: var(--qc-radius-sm) !important;
     }
     /* Hide material-symbols fallback text (Expand_more etc.) */
-    span[class*="material"] {
-        font-size: 0 !important;
-        width: 22px !important;
-        height: 22px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    span[class*="material"]::after {
-        content: "▼" !important;
-        font-size: 10px !important;
-        color: var(--qc-text2) !important;
+    html body span[class*="material"] {
+        display: none !important;
     }
     /* Chat input area */
     div[data-testid="stChatInput"] { background: rgba(255,255,255,0.04) !important; border-radius: var(--qc-radius) !important; border: 1px solid var(--qc-border) !important; }
@@ -676,27 +666,6 @@ if theme == "Квантовое ядро":
 
     .st-cq, .st-cr { color: var(--qc-text2) !important; }
 </style>
-<script>
-new MutationObserver(function(){
-    var sel = document.querySelectorAll('.stSelectbox');
-    for(var i=0;i<sel.length;i++){sel[i].style.setProperty('background','#1a2332','important');}
-    var pop = document.querySelectorAll('[data-testid="stPopoverBody"]');
-    for(var i=0;i<pop.length;i++){
-        pop[i].style.setProperty('background','#1a2332','important');
-        pop[i].style.setProperty('color','#fff','important');
-        pop[i].style.setProperty('padding','16px','important');
-    }
-    var mat = document.querySelectorAll('[class*="material"]');
-    for(var i=0;i<mat.length;i++){
-        mat[i].style.setProperty('font-size','0','important');
-        if(!mat[i].querySelector('.qc-arr')){
-            var a=document.createElement('span');a.className='qc-arr';
-            a.textContent='\u25BC';a.style.cssText='font-size:10px;color:#9CA3AF;';
-            mat[i].appendChild(a);
-        }
-    }
-}).observe(document.body,{childList:true,subtree:true});
-</script>
 """, unsafe_allow_html=True)
 else:
     # ── Backgrounds by time-of-day + color-filter theme ──
@@ -1157,9 +1126,9 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            c = row['Клиент']
                             if st.button("📋 Подробнее", key=f"qd_{row['Клиент']}", use_container_width=True):
-                                st.session_state["qc_detail_client"] = c
+                                st.session_state["client_sel"] = row["Клиент"]
+                                st.rerun()
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
@@ -1168,20 +1137,6 @@ with tab_main:
                         "Соб.2мес": st.column_config.Column(width="small"),
                         "Счет": st.column_config.Column(width="small"),
                     })
-
-            # ── Card detail popup ──
-            dc = st.session_state.get("qc_detail_client")
-            if dc and dc in fdf["Клиент"].values:
-                st.markdown(f"**📋 {dc}**")
-                det = details_map.get(dc, {})
-                for _lb, (_k, _full) in crit_cols.items():
-                    rsn = det.get(_full, {}).get("reasoning", "")
-                    st.markdown(f"- **{_full}**{' — ' + rsn[:300] if rsn else ''}")
-                if st.button("✕ Закрыть"):
-                    del st.session_state["qc_detail_client"]
-                    st.rerun()
-            elif dc:
-                st.session_state.pop("qc_detail_client", None)
 
             # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
