@@ -545,7 +545,7 @@ st.title("🚦 Светофор по клиентской базе")
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([1.5, 9])
 with th_col1:
-    st.selectbox("Тема:", ["Базовый режим", "Квантовое ядро"], key="theme_sel", label_visibility="compact")
+    st.selectbox("", ["Базовый режим", "Квантовое ядро"], key="theme_sel")
 
 # ── Universe greeting ──
 st.markdown(
