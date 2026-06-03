@@ -907,6 +907,18 @@ def async_ai(user_msg, history_copy):
 
 init_db()
 
+# ── Auto-recalculate on current date if stale ──
+conn = get_conn()
+last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
+conn.close()
+today_str = date.today().isoformat()
+if last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str):
+    with st.spinner("⏳ Автоматический пересчёт светофора на сегодняшнюю дату…"):
+        calculate_traffic_light()
+    st.session_state["_refresh"] = True
+    st.rerun()
+    st.stop()
+
 st.title("🚦 Светофор по клиентской базе")
 
 # ── Theme selector (top row) ──
