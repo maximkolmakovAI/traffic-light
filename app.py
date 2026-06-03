@@ -109,7 +109,16 @@ st.markdown(f"""
     div[data-testid="stPopover"] button > span:not(:first-child) {{ display: none !important; }}
     div[data-testid="stPopover"] button svg {{ display: none !important; }}
     /* Dialog styling */
-    div[data-testid="stDialog"] > div {{ background: var(--qc-bg2,#fff) !important; color: var(--qc-text,#000) !important; border-radius: var(--qc-radius,14px) !important; padding: 20px !important; }}
+    div[data-testid="stDialog"], div[data-testid="stDialog"] > div {{
+        background: #1a2332 !important;
+        color: #fff !important;
+        border-radius: 14px !important;
+        padding: 20px !important;
+    }}
+    div[data-testid="stDialog"] .stMarkdown,
+    div[data-testid="stDialog"] p,
+    div[data-testid="stDialog"] span,
+    div[data-testid="stDialog"] strong {{ color: #fff !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -600,6 +609,18 @@ if theme == "Квантовое ядро":
     /* Chat input area */
     div[data-testid="stChatInput"] { background: rgba(255,255,255,0.04) !important; border-radius: var(--qc-radius) !important; border: 1px solid var(--qc-border) !important; }
     div[data-testid="stChatInput"] input { background: transparent !important; border: none !important; color: var(--qc-text) !important; }
+
+    /* ── Dialog ── */
+    div[data-testid="stDialog"] > div,
+    div[data-testid="stDialog"] .stMarkdown,
+    div[data-testid="stDialog"] p,
+    div[data-testid="stDialog"] span,
+    div[data-testid="stDialog"] strong,
+    div[data-testid="stDialog"] label {
+        background: var(--qc-bg2) !important;
+        color: var(--qc-text) !important;
+    }
+    div[data-testid="stDialog"] button { margin-top: 12px !important; }
 
     /* ── Dividers ── */
     .st-divider { border-color: var(--qc-border) !important; margin: 1.2rem 0 !important; }
