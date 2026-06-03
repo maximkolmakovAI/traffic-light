@@ -676,6 +676,27 @@ if theme == "Квантовое ядро":
 
     .st-cq, .st-cr { color: var(--qc-text2) !important; }
 </style>
+<script>
+new MutationObserver(function(){
+    var sel = document.querySelectorAll('.stSelectbox');
+    for(var i=0;i<sel.length;i++){sel[i].style.setProperty('background','#1a2332','important');}
+    var pop = document.querySelectorAll('[data-testid="stPopoverBody"]');
+    for(var i=0;i<pop.length;i++){
+        pop[i].style.setProperty('background','#1a2332','important');
+        pop[i].style.setProperty('color','#fff','important');
+        pop[i].style.setProperty('padding','16px','important');
+    }
+    var mat = document.querySelectorAll('[class*="material"]');
+    for(var i=0;i<mat.length;i++){
+        mat[i].style.setProperty('font-size','0','important');
+        if(!mat[i].querySelector('.qc-arr')){
+            var a=document.createElement('span');a.className='qc-arr';
+            a.textContent='\u25BC';a.style.cssText='font-size:10px;color:#9CA3AF;';
+            mat[i].appendChild(a);
+        }
+    }
+}).observe(document.body,{childList:true,subtree:true});
+</script>
 """, unsafe_allow_html=True)
 else:
     # ── Backgrounds by time-of-day + color-filter theme ──
@@ -860,9 +881,10 @@ init_db()
 st.title("🚦 Светофор по клиентской базе")
 
 # ── Theme selector (top row) ──
-th_col1, _ = st.columns([1.5, 9])
+th_col1, _ = st.columns([2.5, 7.5])
 with th_col1:
-    st.selectbox("", ["Базовый режим", "Квантовое ядро"], key="theme_sel")
+    st.radio("", ["Базовый режим", "Квантовое ядро"], key="theme_sel",
+             horizontal=True, label_visibility="collapsed")
 
 # ── Universe greeting ──
 st.markdown(
@@ -1136,28 +1158,8 @@ with tab_main:
                             </div>
                             """, unsafe_allow_html=True)
                             c = row['Клиент']
-                            with st.popover("📋 Подробнее", use_container_width=True):
-                                with st.spinner(""):
-                                    import time
-                                    time.sleep(0.12)
-                                st.markdown(f"**{c}** · {row['Менеджер']} · {end_dt}  {trend_arrow}")
-                                st.markdown(f"Крит: {crit_bad}  ·  Вспом: {aux_bad}")
-                                det = details_map.get(c, {})
-                                for _lb, (_k, _full) in crit_cols.items():
-                                    val = str(row.get(_lb, ""))
-                                    icon = "✅" if "✅" in val else "❌"
-                                    rsn = det.get(_full, {}).get("reasoning", "")
-                                    line = f"**{icon} {_full}**"
-                                    if rsn:
-                                        line += f"  \n<small>{rsn[:250]}</small>"
-                                    st.markdown(line, unsafe_allow_html=True)
-                                st.divider()
-                                analysis = {
-                                    "green": "Все критерии в норме, клиент в зелёной зоне.",
-                                    "yellow": "Есть невыполненные критерии, требуется внимание.",
-                                    "red": "Критические нарушения, необходимо срочное вмешательство.",
-                                }.get(color, "")
-                                st.markdown(f"📈 *{analysis}*")
+                            if st.button("📋 Подробнее", key=f"qd_{row['Клиент']}", use_container_width=True):
+                                st.session_state["qc_detail_client"] = c
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
@@ -1166,6 +1168,20 @@ with tab_main:
                         "Соб.2мес": st.column_config.Column(width="small"),
                         "Счет": st.column_config.Column(width="small"),
                     })
+
+            # ── Card detail popup ──
+            dc = st.session_state.get("qc_detail_client")
+            if dc and dc in fdf["Клиент"].values:
+                st.markdown(f"**📋 {dc}**")
+                det = details_map.get(dc, {})
+                for _lb, (_k, _full) in crit_cols.items():
+                    rsn = det.get(_full, {}).get("reasoning", "")
+                    st.markdown(f"- **{_full}**{' — ' + rsn[:300] if rsn else ''}")
+                if st.button("✕ Закрыть"):
+                    del st.session_state["qc_detail_client"]
+                    st.rerun()
+            elif dc:
+                st.session_state.pop("qc_detail_client", None)
 
             # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
