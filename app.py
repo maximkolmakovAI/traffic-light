@@ -367,6 +367,32 @@ if theme == "Квантовое ядро":
         background: rgba(255,255,255,0.02) !important;
     }
 
+    /* Override narrow column widths from common CSS */
+    [data-testid="stDataFrame"] th:nth-child(5),
+    [data-testid="stDataFrame"] th:nth-child(6),
+    [data-testid="stDataFrame"] th:nth-child(7),
+    [data-testid="stDataFrame"] th:nth-child(8),
+    [data-testid="stDataFrame"] th:nth-child(9),
+    [data-testid="stDataFrame"] th:nth-child(10),
+    [data-testid="stDataFrame"] th:nth-child(11),
+    [data-testid="stDataFrame"] th:nth-child(12),
+    [data-testid="stDataFrame"] td:nth-child(5),
+    [data-testid="stDataFrame"] td:nth-child(6),
+    [data-testid="stDataFrame"] td:nth-child(7),
+    [data-testid="stDataFrame"] td:nth-child(8),
+    [data-testid="stDataFrame"] td:nth-child(9),
+    [data-testid="stDataFrame"] td:nth-child(10),
+    [data-testid="stDataFrame"] td:nth-child(11),
+    [data-testid="stDataFrame"] td:nth-child(12) {
+        max-width: none !important;
+        width: auto !important;
+        min-width: 40px !important;
+    }
+    [data-testid="stDataFrame"] th:nth-child(2),
+    [data-testid="stDataFrame"] td:nth-child(2) {
+        min-width: 140px !important;
+    }
+
     /* ── Tabs ── */
     .stTabs [data-baseweb="tab-list"] {
         background: rgba(255,255,255,0.02) !important;
