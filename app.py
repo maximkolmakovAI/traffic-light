@@ -393,6 +393,91 @@ if theme == "Квантовое ядро":
         min-width: 140px !important;
     }
 
+    /* ── Client cards (replaces table in quantum mode) ── */
+    .qc-card {
+        background: rgba(255,255,255,0.02) !important;
+        border: 1px solid var(--qc-border) !important;
+        border-left: 4px solid #6B7280 !important;
+        border-radius: var(--qc-radius) !important;
+        padding: 14px 16px !important;
+        margin-bottom: 10px !important;
+        transition: all 0.12s ease !important;
+        position: relative !important;
+        font-family: var(--qc-font) !important;
+    }
+    .qc-card:hover {
+        background: rgba(255,255,255,0.04) !important;
+        border-color: var(--qc-border-hover) !important;
+    }
+    .qc-card.qc-green { border-left-color: #4ade80 !important; }
+    .qc-card.qc-yellow { border-left-color: #fbbf24 !important; }
+    .qc-card.qc-red { border-left-color: #f87171 !important; }
+
+    .qc-card-top {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 6px !important;
+    }
+    .qc-card-client {
+        font-family: var(--qc-font) !important;
+        font-weight: 600 !important;
+        font-size: 15px !important;
+        color: var(--qc-text) !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    .qc-card-trend {
+        font-size: 16px !important;
+        margin-left: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .qc-card-meta {
+        display: flex !important;
+        gap: 16px !important;
+        font-family: var(--qc-mono) !important;
+        font-size: 11px !important;
+        color: var(--qc-text2) !important;
+        margin-bottom: 8px !important;
+    }
+
+    .qc-card-criteria {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        margin-bottom: 4px !important;
+    }
+    .qc-crit {
+        font-family: var(--qc-mono) !important;
+        font-size: 10px !important;
+        padding: 2px 8px !important;
+        border-radius: 6px !important;
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid var(--qc-border) !important;
+        color: var(--qc-text) !important;
+        white-space: nowrap !important;
+        line-height: 1.4 !important;
+    }
+    .qc-crit.pass { border-color: rgba(74,222,128,0.3) !important; color: #4ade80 !important; }
+    .qc-crit.fail { border-color: rgba(248,113,113,0.3) !important; color: #f87171 !important; }
+
+    .qc-card-footer {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding-top: 6px !important;
+        border-top: 1px solid var(--qc-border) !important;
+        font-family: var(--qc-mono) !important;
+        font-size: 11px !important;
+        color: var(--qc-text3) !important;
+    }
+    .qc-manager {
+        color: var(--qc-text2) !important;
+    }
+
     /* ── Tabs ── */
     .stTabs [data-baseweb="tab-list"] {
         background: rgba(255,255,255,0.02) !important;
@@ -954,19 +1039,54 @@ with tab_main:
             if selected_color != "Все":
                 fdf = fdf[fdf["_color"] == selected_color]
 
-            # ── Display columns with trend ──
-            display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
-                            "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы",
-                            "Крит", "Вспом"]
+            # ── Display ──
+            if theme == "Квантовое ядро":
+                for i in range(0, len(fdf), 3):
+                    cols = st.columns(3)
+                    for j, (_, row) in enumerate(fdf.iloc[i:i+3].iterrows()):
+                        color = row.get("_color", "green")
+                        trend = row.get("Тренд", "")
+                        trend_arrow = {"🟢↑": "🟢↑", "🔴↓": "🔴↓", "⚪→": "⚪→", "": ""}.get(trend, "")
 
-            styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
+                        crit_bad = int(row.get("Крит", 0))
+                        aux_bad = int(row.get("Вспом", 0))
+                        end_dt = row.get("Окончание", "")
 
-            st.dataframe(styled, use_container_width=True, height=560,
-                column_config={
-                    "Соб.1р/кв": st.column_config.Column(width="small"),
-                    "Соб.2мес": st.column_config.Column(width="small"),
-                    "Счет": st.column_config.Column(width="small"),
-                })
+                        crit_tags = ""
+                        for clabel in ["Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы"]:
+                            val = str(row.get(clabel, ""))
+                            passed = val.startswith("✅")
+                            cls = "pass" if passed else "fail"
+                            icon = "✓" if passed else "✗"
+                            short = val.replace("✅", "").replace("❌", "").strip()[:20]
+                            tag_text = short if short else clabel[:6]
+                            crit_tags += f"<span class='qc-crit {cls}'>{icon} {tag_text}</span>"
+
+                        with cols[j]:
+                            st.markdown(f"""
+                            <div class='qc-card qc-{color}'>
+                                <div class='qc-card-top'>
+                                    <span class='qc-card-client'>{row['Клиент']}</span>
+                                    <span class='qc-card-trend'>{trend_arrow}</span>
+                                </div>
+                                <div class='qc-card-meta'>
+                                    <span>🗂 {row['Менеджер']}</span>
+                                    <span>📅 {end_dt}</span>
+                                </div>
+                                <div class='qc-card-criteria'>{crit_tags}</div>
+                                <div class='qc-card-footer'>
+                                    <span class='qc-manager'>Крит: {crit_bad} / Вспом: {aux_bad}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+            else:
+                styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
+                st.dataframe(styled, use_container_width=True, height=560,
+                    column_config={
+                        "Соб.1р/кв": st.column_config.Column(width="small"),
+                        "Соб.2мес": st.column_config.Column(width="small"),
+                        "Счет": st.column_config.Column(width="small"),
+                    })
 
             # ── Manual client selector ──
             all_clients = sorted(fdf["Клиент"].unique().tolist())
