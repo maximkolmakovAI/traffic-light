@@ -47,115 +47,14 @@ UNIVERSE_QUOTES = {
 uni = random.choice(["marvel", "starwars", "harrypotter"])
 greeting = random.choice(UNIVERSE_QUOTES[uni]).format(n=_NAME)
 
-# ── Backgrounds by time-of-day + color-filter theme ──
-hour = datetime.now().hour
-filter_color = st.session_state.get("col_f", "Все")
-# Subtle semi-transparent backgrounds
-if filter_color == "green":
-    bg_style = """background: linear-gradient(135deg, rgba(46,204,113,0.12) 0%, rgba(39,174,96,0.08) 100%),
-                         radial-gradient(circle at 20% 80%, rgba(46,204,113,0.06) 0%, transparent 50%),
-                         radial-gradient(circle at 80% 20%, rgba(39,174,96,0.06) 0%, transparent 50%);"""
-elif filter_color == "yellow":
-    bg_style = """background: linear-gradient(135deg, rgba(241,196,15,0.12) 0%, rgba(243,156,18,0.08) 100%),
-                         radial-gradient(circle at 30% 70%, rgba(241,196,15,0.06) 0%, transparent 50%),
-                         radial-gradient(circle at 70% 30%, rgba(243,156,18,0.06) 0%, transparent 50%);"""
-elif filter_color == "red":
-    bg_style = """background: linear-gradient(135deg, rgba(231,76,60,0.12) 0%, rgba(192,57,43,0.08) 100%),
-                         radial-gradient(circle at 40% 60%, rgba(231,76,60,0.06) 0%, transparent 50%),
-                         radial-gradient(circle at 60% 40%, rgba(192,57,43,0.06) 0%, transparent 50%);"""
-elif 6 <= hour < 9:
-    bg_style = "background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);"
-    bg_time_str = "🌅 Рассвет"
-elif 9 <= hour < 18:
-    bg_style = "background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);"
-    bg_time_str = "☀️ День"
-elif 18 <= hour < 21:
-    bg_style = "background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);"
-    bg_time_str = "🌇 Закат"
-else:
-    bg_style = "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
-    bg_time_str = "🌙 Ночь"
+# ── Theme detection (read before any CSS) ──
+theme = st.session_state.get("theme_sel", "Базовый режим")
 
-# Dark theme adjustments for night
-dark_adjust = """
-    .stApp, .stApp header, .stApp footer { color: #e0e0e0 !important; }
-    .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh { color: #e0e0e0 !important; }
-    .stSelectbox label, .stCheckbox label, .stMetric label { color: #e0e0e0 !important; }
-    h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span:not([class*="emoji"]) {
-        color: #e0e0e0 !important;
-    }
-""" if hour < 6 or hour >= 21 else ""
-
+# ── Common CSS (layout, table widths — always applied) ──
 st.markdown(f"""
 <style>
-    .stApp {{
-        {bg_style}
-        background-attachment: fixed;
-        transition: background 0.8s ease;
-    }}
-    .chat-user {{ background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
-    .chat-ai {{ background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {{ gap:0.15rem; }}
-    .cell-info {{ background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; color:#000 !important; }}
-    .trend-up {{ color:#2ecc71; font-weight:bold; }}
-    .trend-down {{ color:#e74c3c; font-weight:bold; }}
-    .trend-same {{ color:#95a5a6; }}
-
-    /* ── Mascot styles (pure CSS, no JS needed) ── */
-    .mascot {{
-        position: fixed;
-        z-index: 9999;
-        pointer-events: none;
-        user-select: none;
-        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
-        animation: mascot-cycle 56s infinite ease-in-out;
-        width:64px; height:64px;
-    }}
-    @keyframes mascot-cycle {{
-        /* wandering */
-        0%   {{ left:3%; top:82%; transform:scaleX(1) translateY(0); opacity:1; }}
-        7%   {{ left:12%; top:72%; transform:scaleX(1) translateY(-2px); opacity:1; }}
-        14%  {{ left:35%; top:60%; transform:scaleX(-1) translateY(0); opacity:1; }}
-        21%  {{ left:58%; top:48%; transform:scaleX(-1) translateY(-2px); opacity:1; }}
-        28%  {{ left:75%; top:55%; transform:scaleX(1) translateY(0); opacity:1; }}
-        35%  {{ left:88%; top:32%; transform:scaleX(1) translateY(-2px); opacity:1; }}
-        42%  {{ left:65%; top:18%; transform:scaleX(-1) translateY(0); opacity:1; }}
-        49%  {{ left:40%; top:12%; transform:scaleX(-1) translateY(-1px); opacity:1; }}
-        /* climb to filter block */
-        56%  {{ left:18%; top:5%; transform:scaleX(1) translateY(0); opacity:1; }}
-        /* rest on filter block */
-        70%  {{ left:18%; top:5.5%; transform:scaleX(1) rotate(2deg); opacity:0.85; }}
-        84%  {{ left:18%; top:5%; transform:scaleX(1) rotate(-2deg); opacity:0.8; }}
-        /* wake and start wandering */
-        91%  {{ left:8%; top:30%; transform:scaleX(-1) translateY(0); opacity:1; }}
-        100% {{ left:3%; top:82%; transform:scaleX(1) translateY(0); opacity:1; }}
-    }}
-    .mascot:hover {{
-        animation: mascot-surprise 0.6s ease;
-        transform:scale(1.3) !important;
-    }}
-    @keyframes mascot-surprise {{
-        0%   {{ transform:scale(1) rotate(0deg); }}
-        25%  {{ transform:scale(1.4) rotate(-12deg); }}
-        50%  {{ transform:scale(1.1) rotate(8deg); }}
-        75%  {{ transform:scale(1.3) rotate(-5deg); }}
-        100% {{ transform:scale(1) rotate(0deg); }}
-    }}
-
-
-    .greeting-card {{
-        background: rgba(255,255,255,0.15);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 1rem;
-        padding: 0.8rem 1.2rem;
-        margin-bottom: 0.5rem;
-        border: 1px solid rgba(255,255,255,0.3);
-        font-size: 0.95rem;
-        text-align: center;
-    }}
     .css-1offfwp {{ padding:0.5rem !important; }}
-    /* ── Table full-width + compact cells ── */
     .main > div {{ max-width:100% !important; padding-left:0.3rem !important; padding-right:0.3rem !important; }}
     .block-container {{ padding:0.5rem 0.3rem !important; max-width:100% !important; }}
     [data-testid="column"] > div > div > div > div > div > div[data-testid="stDataFrame"] > div {{
@@ -167,8 +66,6 @@ st.markdown(f"""
     [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {{
         padding:1px 3px !important; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }}
-    /* narrow columns for short criteria names */
-    /* col 5 = Соб.1р/кв, col 8 = Соб.2мес */
     [data-testid="stDataFrame"] th:nth-child(5),
     [data-testid="stDataFrame"] th:nth-child(8) {{
         max-width:55px !important; width:55px !important;
@@ -177,7 +74,6 @@ st.markdown(f"""
     [data-testid="stDataFrame"] td:nth-child(8) {{
         max-width:55px !important; width:55px !important;
     }}
-    /* col 9 = Счет, col 10 = Документы — narrower */
     [data-testid="stDataFrame"] th:nth-child(9),
     [data-testid="stDataFrame"] th:nth-child(10) {{
         max-width:30px !important; width:30px !important;
@@ -186,7 +82,6 @@ st.markdown(f"""
     [data-testid="stDataFrame"] td:nth-child(10) {{
         max-width:30px !important; width:30px !important;
     }}
-    /* col 6=Жалобы, 7=Наряды */
     [data-testid="stDataFrame"] th:nth-child(6),
     [data-testid="stDataFrame"] th:nth-child(7) {{
         max-width:40px !important; width:40px !important;
@@ -205,10 +100,329 @@ st.markdown(f"""
     [data-testid="stDataFrame"] td:nth-child(12) {{
         max-width:35px !important; width:35px !important;
     }}
-    /* Client name column gets more space */
     [data-testid="stDataFrame"] th:nth-child(2) {{ min-width:120px !important; }}
     [data-testid="stDataFrame"] td:nth-child(2) {{ min-width:120px !important; }}
-    /* ── Color filter buttons ── */
+    div[data-testid*="cf_"] button[kind="primary"] {{
+        font-weight:bold !important; transform:scale(1.03);
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Theme-specific CSS ──
+if theme == "Квантовое ядро":
+    st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+    .stApp {
+        background: linear-gradient(135deg, #0b1325 0%, #172036 30%, #1F2937 60%, #0f1729 100%) !important;
+        background-attachment: fixed !important;
+        transition: background 0.5s ease;
+    }
+
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background:
+            radial-gradient(ellipse at 20% 40%, rgba(96,165,250,0.07) 0%, transparent 55%),
+            radial-gradient(ellipse at 80% 20%, rgba(96,165,250,0.04) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 80%, rgba(31,41,55,0.2) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .stApp, .stApp header, .stApp footer,
+    h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span,
+    .stSelectbox label, .stCheckbox label, .stMetric label,
+    .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh {
+        color: #FFFFFF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    .st-bv, .st-bw { color: #9CA3AF !important; }
+    .st-d5, .st-d6, .st-d7, .st-d8, .st-da { border-color: rgba(255,255,255,0.1) !important; }
+
+    [data-testid="stDataFrame"], [data-testid="stDataFrame"] table,
+    [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th,
+    code, pre, .stTextInput input, .st-b7, .st-b8, .st-b9, .st-ba, .st-bb,
+    .st-bc, .st-bd, .st-be, .st-bf, .st-bg, .st-bh, .st-bi, .st-bj,
+    div[data-baseweb="select"] span {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+    }
+    [data-testid="stDataFrame"] th {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 500 !important;
+        background: rgba(96,165,250,0.12) !important;
+        color: #FFFFFF !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        font-size: 0.72rem !important;
+    }
+    [data-testid="stDataFrame"] td {
+        color: #E5E7EB !important;
+        border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    }
+    [data-testid="stDataFrame"] { border-radius: 16px !important; overflow: hidden !important; }
+    [data-testid="stDataFrame"] table { background: rgba(255,255,255,0.02) !important; }
+
+    .greeting-card {
+        background: linear-gradient(135deg, rgba(96,165,250,0.10) 0%, rgba(31,41,55,0.20) 100%) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255,255,255,0.10) !important;
+        border-radius: 16px !important;
+        box-shadow:
+            rgba(255,255,255,0.04) 0px 1px 0px 0px inset,
+            rgba(0,0,0,0.5) 0px 4px 16px 0px,
+            rgba(96,165,250,0.06) 0px 0px 30px !important;
+        color: #FFFFFF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    .stButton button, div[data-testid*="stButton"] button,
+    .stDownloadButton button {
+        border-radius: 16px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 400 !important;
+        transition: all 0.15s ease !important;
+    }
+    .stButton button[kind="secondary"],
+    .stDownloadButton button {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #FFFFFF !important;
+    }
+    .stButton button[kind="secondary"]:hover,
+    .stDownloadButton button:hover {
+        background: rgba(255,255,255,0.08) !important;
+        border-color: rgba(255,255,255,0.25) !important;
+    }
+    .stButton button[kind="primary"] {
+        background: rgba(96,165,250,0.15) !important;
+        border: 1px solid rgba(96,165,250,0.35) !important;
+        color: #FFFFFF !important;
+    }
+    .stButton button[kind="primary"]:hover {
+        background: rgba(96,165,250,0.25) !important;
+    }
+
+    div[data-testid*="cf_green"] button {
+        background: rgba(46,204,113,0.12) !important;
+        border: 1px solid rgba(46,204,113,0.25) !important;
+        color: #4ade80 !important;
+    }
+    div[data-testid*="cf_green"] button[kind="primary"] {
+        background: rgba(46,204,113,0.25) !important;
+        border: 1px solid #4ade80 !important;
+        color: #FFFFFF !important;
+    }
+    div[data-testid*="cf_yellow"] button {
+        background: rgba(241,196,15,0.12) !important;
+        border: 1px solid rgba(241,196,15,0.25) !important;
+        color: #fbbf24 !important;
+    }
+    div[data-testid*="cf_yellow"] button[kind="primary"] {
+        background: rgba(241,196,15,0.25) !important;
+        border: 1px solid #fbbf24 !important;
+        color: #FFFFFF !important;
+    }
+    div[data-testid*="cf_red"] button {
+        background: rgba(231,76,60,0.12) !important;
+        border: 1px solid rgba(231,76,60,0.25) !important;
+        color: #f87171 !important;
+    }
+    div[data-testid*="cf_red"] button[kind="primary"] {
+        background: rgba(231,76,60,0.25) !important;
+        border: 1px solid #f87171 !important;
+        color: #FFFFFF !important;
+    }
+
+    div[data-baseweb="select"], div[data-baseweb="select"] > div {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 12px !important;
+        color: #FFFFFF !important;
+    }
+    div[data-baseweb="select"]:hover {
+        border-color: rgba(96,165,250,0.4) !important;
+    }
+    .stSelectbox svg { fill: #FFFFFF !important; }
+
+    div[data-testid="stRadio"] label {
+        color: #FFFFFF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        background: rgba(255,255,255,0.03) !important;
+        border-radius: 12px !important;
+        padding: 2px !important;
+    }
+    div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p { color: #FFFFFF !important; }
+
+    div[data-testid="stCheckbox"] label {
+        color: #FFFFFF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    div[data-testid="stCheckbox"] svg { fill: #60A5FA !important; }
+
+    .chat-user { background: rgba(96,165,250,0.12) !important; color: #FFFFFF !important; border-radius: 12px !important; }
+    .chat-ai { background: rgba(255,255,255,0.04) !important; color: #FFFFFF !important; border-radius: 12px !important; }
+
+    .cell-info {
+        background: rgba(96,165,250,0.06) !important;
+        border-left: 4px solid #60A5FA !important;
+        color: #FFFFFF !important;
+        border-radius: 12px !important;
+    }
+
+    .trend-up { color: #4ade80 !important; font-weight: bold; }
+    .trend-down { color: #f87171 !important; font-weight: bold; }
+    .trend-same { color: #6B7280 !important; }
+
+    .stPlotlyChart, .js-plotly-plot, .plot-container { background: transparent !important; }
+    .main-svg { background: transparent !important; }
+    .stPlotlyChart { border-radius: 16px !important; overflow: hidden !important; }
+
+    .st-eb, .st-ea, .st-dz, .st-dy, .st-dx { border-color: rgba(255,255,255,0.08) !important; }
+
+    .st-cx, .st-cy, .st-cz, .st-da, .st-d0, .st-d1, .st-d2, .st-d3, .st-d4 {
+        background: rgba(255,255,255,0.02) !important;
+    }
+
+    .st-subheader, .stSubheader, .st-emotion-cache-18ni7ap { color: #FFFFFF !important; }
+
+    .st-cq { background: rgba(255,255,255,0.03) !important; }
+
+    div[data-testid="stPopover"] button {
+        border-radius: 16px !important;
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #FFFFFF !important;
+    }
+    div[data-testid="stPopover"] button:hover {
+        background: rgba(255,255,255,0.08) !important;
+    }
+
+    .st-divider { border-color: rgba(255,255,255,0.08) !important; }
+
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(255,255,255,0.03) !important;
+        border-radius: 12px !important;
+        gap: 2px !important;
+        padding: 2px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 10px !important;
+        color: #9CA3AF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: rgba(96,165,250,0.15) !important;
+        color: #FFFFFF !important;
+    }
+
+    .st-bb, .st-bc, .st-bd, .st-be, .st-bf { background: rgba(255,255,255,0.02) !important; }
+
+    .stAlert { border-radius: 12px !important; }
+
+    input, textarea, .stTextInput input {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 12px !important;
+        color: #FFFFFF !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    input:focus, textarea:focus {
+        border-color: #60A5FA !important;
+        box-shadow: 0 0 0 2px rgba(96,165,250,0.15) !important;
+    }
+
+    .st-bh, .st-bi, .st-bj { color: #FFFFFF !important; }
+
+    .stProgress > div > div { background: #60A5FA !important; }
+    .stProgress > div { background: rgba(255,255,255,0.08) !important; border-radius: 8px !important; }
+
+    .st-spinner { color: #60A5FA !important; }
+
+    /* Tooltip / dropdown menu */
+    div[data-baseweb="popover"] div {
+        background: #1F2937 !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+    }
+    div[data-baseweb="menu"] div[role="option"] {
+        color: #FFFFFF !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    div[data-baseweb="menu"] div[role="option"]:hover {
+        background: rgba(96,165,250,0.1) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+else:
+    # ── Backgrounds by time-of-day + color-filter theme ──
+    hour = datetime.now().hour
+    filter_color = st.session_state.get("col_f", "Все")
+    if filter_color == "green":
+        bg_style = """background: linear-gradient(135deg, rgba(46,204,113,0.12) 0%, rgba(39,174,96,0.08) 100%),
+                             radial-gradient(circle at 20% 80%, rgba(46,204,113,0.06) 0%, transparent 50%),
+                             radial-gradient(circle at 80% 20%, rgba(39,174,96,0.06) 0%, transparent 50%);"""
+    elif filter_color == "yellow":
+        bg_style = """background: linear-gradient(135deg, rgba(241,196,15,0.12) 0%, rgba(243,156,18,0.08) 100%),
+                             radial-gradient(circle at 30% 70%, rgba(241,196,15,0.06) 0%, transparent 50%),
+                             radial-gradient(circle at 70% 30%, rgba(243,156,18,0.06) 0%, transparent 50%);"""
+    elif filter_color == "red":
+        bg_style = """background: linear-gradient(135deg, rgba(231,76,60,0.12) 0%, rgba(192,57,43,0.08) 100%),
+                             radial-gradient(circle at 40% 60%, rgba(231,76,60,0.06) 0%, transparent 50%),
+                             radial-gradient(circle at 60% 40%, rgba(192,57,43,0.06) 0%, transparent 50%);"""
+    elif 6 <= hour < 9:
+        bg_style = "background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f9d976 100%);"
+        bg_time_str = "🌅 Рассвет"
+    elif 9 <= hour < 18:
+        bg_style = "background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);"
+        bg_time_str = "☀️ День"
+    elif 18 <= hour < 21:
+        bg_style = "background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);"
+        bg_time_str = "🌇 Закат"
+    else:
+        bg_style = "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
+        bg_time_str = "🌙 Ночь"
+
+    dark_adjust = """
+        .stApp, .stApp header, .stApp footer { color: #e0e0e0 !important; }
+        .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh { color: #e0e0e0 !important; }
+        .stSelectbox label, .stCheckbox label, .stMetric label { color: #e0e0e0 !important; }
+        h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span:not([class*="emoji"]) {
+            color: #e0e0e0 !important;
+        }
+    """ if hour < 6 or hour >= 21 else ""
+
+    st.markdown(f"""
+<style>
+    .stApp {{
+        {bg_style}
+        background-attachment: fixed;
+        transition: background 0.8s ease;
+    }}
+    .chat-user {{ background-color:#e3f2fd; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
+    .chat-ai {{ background-color:#f5f5f5; padding:0.3rem; margin:0.15rem 0; border-radius:0.3rem; color:#000 !important; }}
+    .cell-info {{ background:#f0f2f6; padding:0.5rem; border-radius:0.5rem; border-left:4px solid #1f77b4; color:#000 !important; }}
+    .trend-up {{ color:#2ecc71; font-weight:bold; }}
+    .trend-down {{ color:#e74c3c; font-weight:bold; }}
+    .trend-same {{ color:#95a5a6; }}
+
+    .greeting-card {{
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        padding: 0.8rem 1.2rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid rgba(255,255,255,0.3);
+        font-size: 0.95rem;
+        text-align: center;
+    }}
     div[data-testid*="cf_green"] button {{
         background-color:rgba(46,204,113,0.2) !important;
         border-color:#2ecc71 !important; color:#1a7a42 !important;
@@ -221,14 +435,9 @@ st.markdown(f"""
         background-color:rgba(231,76,60,0.2) !important;
         border-color:#e74c3c !important; color:#8a1a1a !important;
     }}
-    div[data-testid*="cf_"] button[kind="primary"] {{
-        font-weight:bold !important; transform:scale(1.03);
-    }}
     {dark_adjust}
 </style>
 """, unsafe_allow_html=True)
-
-# Cat hidden
 
 
 def get_details_map():
@@ -332,6 +541,11 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 st.title("🚦 Светофор по клиентской базе")
+
+# ── Theme selector (top row) ──
+th_col1, _ = st.columns([1.5, 9])
+with th_col1:
+    st.selectbox("Тема:", ["Базовый режим", "Квантовое ядро"], key="theme_sel", label_visibility="compact")
 
 # ── Universe greeting ──
 st.markdown(
