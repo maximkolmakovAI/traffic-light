@@ -690,38 +690,6 @@ if theme == "Квантовое ядро":
         border-color: rgba(96,165,250,0.5) !important;
     }
 
-    /* ── Color filter buttons ── */
-    div[data-testid*="cf_green"] button {
-        background: rgba(46,204,113,0.10) !important;
-        border: 1px solid rgba(46,204,113,0.2) !important;
-        color: #4ade80 !important;
-    }
-    div[data-testid*="cf_green"] button[kind="primary"] {
-        background: rgba(46,204,113,0.22) !important;
-        border-color: #4ade80 !important;
-        color: #fff !important;
-    }
-    div[data-testid*="cf_yellow"] button {
-        background: rgba(241,196,15,0.10) !important;
-        border: 1px solid rgba(241,196,15,0.2) !important;
-        color: #fbbf24 !important;
-    }
-    div[data-testid*="cf_yellow"] button[kind="primary"] {
-        background: rgba(241,196,15,0.22) !important;
-        border-color: #fbbf24 !important;
-        color: #fff !important;
-    }
-    div[data-testid*="cf_red"] button {
-        background: rgba(231,76,60,0.10) !important;
-        border: 1px solid rgba(231,76,60,0.2) !important;
-        color: #f87171 !important;
-    }
-    div[data-testid*="cf_red"] button[kind="primary"] {
-        background: rgba(231,76,60,0.22) !important;
-        border-color: #f87171 !important;
-        color: #fff !important;
-    }
-
     /* ── Selectbox / dropdown ── */
     div[data-baseweb="select"], div[data-baseweb="select"] > div,
     div[data-baseweb="select"] > div > div {
@@ -1236,18 +1204,6 @@ else:
         font-size: 0.95rem;
         text-align: center;
     }}
-    div[data-testid*="cf_green"] button {{
-        background-color:rgba(46,204,113,0.2) !important;
-        border-color:#2ecc71 !important; color:#1a7a42 !important;
-    }}
-    div[data-testid*="cf_yellow"] button {{
-        background-color:rgba(241,196,15,0.2) !important;
-        border-color:#f1c40f !important; color:#8a6d00 !important;
-    }}
-    div[data-testid*="cf_red"] button {{
-        background-color:rgba(231,76,60,0.2) !important;
-        border-color:#e74c3c !important; color:#8a1a1a !important;
-    }}
     {dark_adjust}
 </style>
 """, unsafe_allow_html=True)
@@ -1539,26 +1495,6 @@ with tab_main:
         st.rerun()
 
     if total > 0:
-        # ── Color filter buttons (shortcuts that set selectbox) ──
-        col_g, col_y, col_r = st.columns(3)
-        # Sync button visual state with selectbox (in case dropdown was used)
-        if st.session_state.get("cf_btn", "Все") != st.session_state.get("col_f", "Все"):
-            st.session_state["cf_btn"] = st.session_state["col_f"]
-        cur_btn = st.session_state.get("cf_btn", "Все")
-        for col, color, label, cnt in [
-            (col_g, "green", "Зеленый", counts.get("green", 0)),
-            (col_y, "yellow", "Желтый", counts.get("yellow", 0)),
-            (col_r, "red", "Красный", counts.get("red", 0)),
-        ]:
-            is_active = cur_btn == color
-            if col.button(f"{'●' if is_active else '○'} {label}: {cnt}",
-                          key=f"cf_{color}", use_container_width=True,
-                          type="primary" if is_active else "secondary"):
-                new_val = "Все" if is_active else color
-                st.session_state["col_f"] = new_val
-                st.session_state["cf_btn"] = new_val
-                st.rerun()
-
         # ── Cache data ──
         if "_cache" not in st.session_state or st.session_state.pop("_refresh", False):
             cdf, ccrit, cdm = load_traffic_data()
@@ -1567,15 +1503,14 @@ with tab_main:
 
         if not df.empty:
             # ── Filters row ──
-            flt1, flt2, flt3, flt4 = st.columns([2, 2, 2, 3])
+            flt1, flt2, flt3, flt4 = st.columns([2.5, 2.5, 2, 3])
 
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
-                selected_color = st.selectbox("Зона", ["Все", "green", "yellow", "red"],
-                    format_func=lambda x: COLOR_LABEL.get(x, "Все") if x != "Все" else "Все",
-                    key="col_f", label_visibility="collapsed")
+                crit_filter_opts = ["Все", "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы"]
+                selected_crit = st.selectbox("Критерий нарушен", crit_filter_opts, key="crit_f", label_visibility="collapsed")
             with flt3:
                 show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
@@ -1608,8 +1543,8 @@ with tab_main:
 
             if selected_manager != "Все":
                 fdf = fdf[fdf["Менеджер"] == selected_manager]
-            if selected_color != "Все":
-                fdf = fdf[fdf["_color"] == selected_color]
+            if selected_crit != "Все":
+                fdf = fdf[fdf[selected_crit].astype(str).str.startswith("❌")]
 
             # ── Current client (from card click or dropdown) ──
             sel_client = st.session_state.get("client_sel", "")
