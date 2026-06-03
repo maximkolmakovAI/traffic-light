@@ -1012,6 +1012,7 @@ with tab_upload_folder:
 
 with tab_main:
     conn = get_conn()
+    db_total = conn.execute("SELECT COUNT(*) FROM traffic_light_results").fetchone()[0]
     counts_data = conn.execute(
         "SELECT final_color, COUNT(*) as cnt FROM traffic_light_results GROUP BY final_color"
     ).fetchall()
@@ -1020,6 +1021,12 @@ with tab_main:
     for r in counts_data:
         counts[r["final_color"]] = r["cnt"]
     total = sum(counts.values())
+    from config import DB_PATH
+    if total < 100:
+        st.warning(f"⚠️ В базе всего {total} записей (ожидается ~2854). "
+                   f"Используются демо-данные (нет исходников на облаке).")
+        st.caption("Запустите приложение ЛОКАЛЬНО через start.bat — "
+                   "там есть исходные файлы и полная БД.")
 
     col1, col2 = st.columns(2)
     if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
