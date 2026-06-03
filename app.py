@@ -861,19 +861,6 @@ def render_color_row(row, fdf):
     bg = COLOR_BG.get(color, "#ffffff")
     return [f"background-color: {bg}"] * len(row)
 
-
-# ── Client detail dialog ──
-@st.dialog("📋 Детали клиента")
-def client_detail(cname, detmap, ccols):
-    det = detmap.get(cname, {})
-    st.markdown(f"**{cname}**")
-    for _lb, (_k, _full) in ccols.items():
-        rsn = det.get(_full, {}).get("reasoning", "")
-        st.markdown(f"- **{_full}**{' — ' + rsn[:300] if rsn else ''}")
-    if st.button("✕ Закрыть", use_container_width=True):
-        st.rerun()
-
-
 def async_ai(user_msg, history_copy):
     try:
         from ai_assistant import ask_ai
@@ -886,6 +873,12 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 st.title("🚦 Светофор по клиентской базе")
+
+# ── Handle detail link from query param ──
+_qp = st.query_params.get("client")
+if _qp:
+    st.session_state.client_sel = _qp
+    st.query_params.clear()
 
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([2.5, 7.5])
@@ -1167,7 +1160,7 @@ with tab_main:
                             """, unsafe_allow_html=True)
                             st.button("📋", key=f"qd_{row['Клиент']}",
                                       use_container_width=True,
-                                      on_click=lambda n=row['Клиент'], dm=details_map, cc=crit_cols: client_detail(n, dm, cc))
+                                      on_click=lambda n=row['Клиент']: st.query_params.update(client=n))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
