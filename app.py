@@ -853,12 +853,6 @@ init_db()
 
 st.title("🚦 Светофор по клиентской базе")
 
-# ── Handle detail link from query param ──
-_qp = st.query_params.get("client")
-if _qp:
-    st.session_state.client_sel = _qp
-    st.query_params.clear()
-
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([2.5, 7.5])
 with th_col1:
@@ -1136,18 +1130,9 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                    # Button row BELOW the cards (outside card columns)
-                    btn_cols = st.columns(3)
-                    for j, (_, row) in enumerate(fdf.iloc[i:i+3].iterrows()):
-                        with btn_cols[j]:
-                            cname = row['Клиент']
-                            st.markdown(
-                                f"<a href='?client={cname}' target='_self' "
-                                f"style='display:block;text-align:center;padding:4px 0;"
-                                f"color:var(--qc-accent,#60A5FA);font-size:13px;"
-                                f"text-decoration:none;border:1px solid var(--qc-border,rgba(255,255,255,0.08));"
-                                f"border-radius:var(--qc-radius-sm,10px);'>📋 Подробнее</a>",
-                                unsafe_allow_html=True)
+                            st.button("📋", key=f"qd_{row['Клиент']}",
+                                      use_container_width=True,
+                                      on_click=lambda n=row['Клиент']: st.session_state.update(client_sel=n))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
