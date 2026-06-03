@@ -112,12 +112,32 @@ st.markdown(f"""
 if theme == "Квантовое ядро":
     st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+    :root {
+        --qc-bg: #0f1729;
+        --qc-bg2: #1a2332;
+        --qc-bg3: #1F2937;
+        --qc-surface: #253040;
+        --qc-accent: #60A5FA;
+        --qc-accent-glow: rgba(96,165,250,0.2);
+        --qc-text: #FFFFFF;
+        --qc-text2: #9CA3AF;
+        --qc-text3: #6B7280;
+        --qc-border: rgba(255,255,255,0.08);
+        --qc-border-hover: rgba(255,255,255,0.18);
+        --qc-shadow: rgba(0,0,0,0.3);
+        --qc-radius: 14px;
+        --qc-radius-sm: 10px;
+        --qc-section-pad: 28px;
+        --qc-card-pad: 16px;
+        --qc-font: 'Inter', sans-serif;
+        --qc-mono: 'JetBrains Mono', monospace;
+    }
 
     .stApp {
-        background: linear-gradient(135deg, #0b1325 0%, #172036 30%, #1F2937 60%, #0f1729 100%) !important;
+        background: var(--qc-bg) !important;
         background-attachment: fixed !important;
-        transition: background 0.5s ease;
     }
 
     .stApp::before {
@@ -125,239 +145,372 @@ if theme == "Квантовое ядро":
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
         background:
-            radial-gradient(ellipse at 20% 40%, rgba(96,165,250,0.07) 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 20%, rgba(96,165,250,0.04) 0%, transparent 45%),
-            radial-gradient(ellipse at 50% 80%, rgba(31,41,55,0.2) 0%, transparent 50%);
-        pointer-events: none;
-        z-index: -1;
+            radial-gradient(ellipse at 20% 30%, rgba(96,165,250,0.08) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 70%, rgba(96,165,250,0.05) 0%, transparent 40%);
+        pointer-events: none; z-index: -1;
     }
+
+    .block-container {
+        padding: 0 var(--qc-section-pad) !important;
+        max-width: 100% !important;
+    }
+
+    .main > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
 
     .stApp, .stApp header, .stApp footer,
     h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span,
     .stSelectbox label, .stCheckbox label, .stMetric label,
     .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh {
-        color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
+    }
+    .st-bv, .st-bw { color: var(--qc-text2) !important; }
+
+    h1 { font-weight: 600 !important; letter-spacing: -0.02em; }
+    h2, h3, .stSubheader { font-weight: 500 !important; }
+
+    /* ── Card surface (greeting, charts, main sections) ── */
+    .element-container:has(.greeting-card),
+    .element-container:has(.stPlotlyChart),
+    .element-container:has(.stDataFrame),
+    .element-container:has(.alert-content) {
+        margin-bottom: 16px;
     }
 
-    .st-bv, .st-bw { color: #9CA3AF !important; }
-    .st-d5, .st-d6, .st-d7, .st-d8, .st-da { border-color: rgba(255,255,255,0.1) !important; }
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] { gap: 12px !important; }
 
-    [data-testid="stDataFrame"], [data-testid="stDataFrame"] table,
-    [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th,
-    code, pre, .stTextInput input, .st-b7, .st-b8, .st-b9, .st-ba, .st-bb,
-    .st-bc, .st-bd, .st-be, .st-bf, .st-bg, .st-bh, .st-bi, .st-bj,
-    div[data-baseweb="select"] span {
-        font-family: 'JetBrains Mono', monospace !important;
-        font-size: 11px !important;
+    .stAlert {
+        border-radius: var(--qc-radius) !important;
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid var(--qc-border) !important;
+        color: var(--qc-text) !important;
     }
-    [data-testid="stDataFrame"] th {
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 500 !important;
-        background: rgba(96,165,250,0.12) !important;
-        color: #FFFFFF !important;
-        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
-        font-size: 0.72rem !important;
-    }
-    [data-testid="stDataFrame"] td {
-        color: #E5E7EB !important;
-        border-bottom: 1px solid rgba(255,255,255,0.04) !important;
-    }
-    [data-testid="stDataFrame"] { border-radius: 16px !important; overflow: hidden !important; }
-    [data-testid="stDataFrame"] table { background: rgba(255,255,255,0.02) !important; }
 
+    /* ── Greeting card ── */
     .greeting-card {
-        background: linear-gradient(135deg, rgba(96,165,250,0.10) 0%, rgba(31,41,55,0.20) 100%) !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255,255,255,0.10) !important;
-        border-radius: 16px !important;
+        background: linear-gradient(135deg, rgba(96,165,250,0.06) 0%, rgba(31,41,55,0.15) 100%) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        border-radius: var(--qc-radius) !important;
+        padding: 14px 20px !important;
+        margin-bottom: 16px !important;
         box-shadow:
-            rgba(255,255,255,0.04) 0px 1px 0px 0px inset,
-            rgba(0,0,0,0.5) 0px 4px 16px 0px,
-            rgba(96,165,250,0.06) 0px 0px 30px !important;
-        color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
-    }
-
-    .stButton button, div[data-testid*="stButton"] button,
-    .stDownloadButton button {
-        border-radius: 16px !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 400 !important;
+            rgba(255,255,255,0.03) 0px 1px 0px 0px inset,
+            rgba(0,0,0,0.4) 0px 4px 16px 0px,
+            rgba(96,165,250,0.03) 0px 0px 24px !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
+        font-size: 0.95rem !important;
+        text-align: center !important;
         transition: all 0.15s ease !important;
     }
-    .stButton button[kind="secondary"],
-    .stDownloadButton button {
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        color: #FFFFFF !important;
+
+    /* ── Buttons ── */
+    .stButton button, .stDownloadButton button, div[data-testid*="stButton"] button {
+        border-radius: var(--qc-radius) !important;
+        font-family: var(--qc-font) !important;
+        font-weight: 400 !important;
+        font-size: 14px !important;
+        padding: 0.4rem 1rem !important;
+        transition: all 0.15s ease !important;
+        box-shadow: none !important;
     }
-    .stButton button[kind="secondary"]:hover,
-    .stDownloadButton button:hover {
+    .stButton button[kind="secondary"], .stDownloadButton button {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid var(--qc-border) !important;
+        color: var(--qc-text) !important;
+    }
+    .stButton button[kind="secondary"]:hover, .stDownloadButton button:hover {
         background: rgba(255,255,255,0.08) !important;
-        border-color: rgba(255,255,255,0.25) !important;
+        border-color: var(--qc-border-hover) !important;
     }
     .stButton button[kind="primary"] {
-        background: rgba(96,165,250,0.15) !important;
-        border: 1px solid rgba(96,165,250,0.35) !important;
-        color: #FFFFFF !important;
+        background: var(--qc-accent-glow) !important;
+        border: 1px solid rgba(96,165,250,0.3) !important;
+        color: var(--qc-text) !important;
     }
     .stButton button[kind="primary"]:hover {
         background: rgba(96,165,250,0.25) !important;
+        border-color: rgba(96,165,250,0.5) !important;
     }
 
+    /* ── Color filter buttons ── */
     div[data-testid*="cf_green"] button {
-        background: rgba(46,204,113,0.12) !important;
-        border: 1px solid rgba(46,204,113,0.25) !important;
+        background: rgba(46,204,113,0.10) !important;
+        border: 1px solid rgba(46,204,113,0.2) !important;
         color: #4ade80 !important;
     }
     div[data-testid*="cf_green"] button[kind="primary"] {
-        background: rgba(46,204,113,0.25) !important;
-        border: 1px solid #4ade80 !important;
-        color: #FFFFFF !important;
+        background: rgba(46,204,113,0.22) !important;
+        border-color: #4ade80 !important;
+        color: #fff !important;
     }
     div[data-testid*="cf_yellow"] button {
-        background: rgba(241,196,15,0.12) !important;
-        border: 1px solid rgba(241,196,15,0.25) !important;
+        background: rgba(241,196,15,0.10) !important;
+        border: 1px solid rgba(241,196,15,0.2) !important;
         color: #fbbf24 !important;
     }
     div[data-testid*="cf_yellow"] button[kind="primary"] {
-        background: rgba(241,196,15,0.25) !important;
-        border: 1px solid #fbbf24 !important;
-        color: #FFFFFF !important;
+        background: rgba(241,196,15,0.22) !important;
+        border-color: #fbbf24 !important;
+        color: #fff !important;
     }
     div[data-testid*="cf_red"] button {
-        background: rgba(231,76,60,0.12) !important;
-        border: 1px solid rgba(231,76,60,0.25) !important;
+        background: rgba(231,76,60,0.10) !important;
+        border: 1px solid rgba(231,76,60,0.2) !important;
         color: #f87171 !important;
     }
     div[data-testid*="cf_red"] button[kind="primary"] {
-        background: rgba(231,76,60,0.25) !important;
-        border: 1px solid #f87171 !important;
-        color: #FFFFFF !important;
+        background: rgba(231,76,60,0.22) !important;
+        border-color: #f87171 !important;
+        color: #fff !important;
     }
 
-    div[data-baseweb="select"], div[data-baseweb="select"] > div {
+    /* ── Selectbox / dropdown ── */
+    div[data-baseweb="select"], div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] > div > div {
         background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 12px !important;
-        color: #FFFFFF !important;
+        border: 1px solid var(--qc-border) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-mono) !important;
+        font-size: 12px !important;
+        min-height: 34px !important;
     }
-    div[data-baseweb="select"]:hover {
-        border-color: rgba(96,165,250,0.4) !important;
-    }
-    .stSelectbox svg { fill: #FFFFFF !important; }
+    div[data-baseweb="select"]:hover { border-color: rgba(96,165,250,0.35) !important; }
+    .stSelectbox svg { fill: var(--qc-text2) !important; }
 
+    div[data-baseweb="popover"] div[data-baseweb="menu"] {
+        background: var(--qc-bg3) !important;
+        border: 1px solid var(--qc-border) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+    }
+    div[data-baseweb="menu"] div[role="option"] {
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
+        font-size: 13px !important;
+        padding: 6px 12px !important;
+    }
+    div[data-baseweb="menu"] div[role="option"]:hover {
+        background: rgba(96,165,250,0.08) !important;
+    }
+    div[data-baseweb="menu"] div[role="option"][aria-selected="true"] {
+        background: rgba(96,165,250,0.12) !important;
+    }
+
+    /* ── Radio ── */
+    div[data-testid="stRadio"] {
+        gap: 4px !important;
+    }
     div[data-testid="stRadio"] label {
-        color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
+        font-size: 13px !important;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] {
         background: rgba(255,255,255,0.03) !important;
-        border-radius: 12px !important;
-        padding: 2px !important;
+        border-radius: var(--qc-radius-sm) !important;
+        padding: 3px !important;
+        gap: 2px !important;
     }
-    div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p { color: #FFFFFF !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label {
+        border-radius: 8px !important;
+        padding: 3px 10px !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {
+        background: rgba(96,165,250,0.15) !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:not([aria-checked="true"]):hover {
+        background: rgba(255,255,255,0.04) !important;
+    }
 
+    /* ── Checkbox ── */
     div[data-testid="stCheckbox"] label {
-        color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
     }
-    div[data-testid="stCheckbox"] svg { fill: #60A5FA !important; }
+    div[data-testid="stCheckbox"] svg { fill: var(--qc-accent) !important; }
+    div[data-testid="stCheckbox"]:hover { opacity: 0.85; }
 
-    .chat-user { background: rgba(96,165,250,0.12) !important; color: #FFFFFF !important; border-radius: 12px !important; }
-    .chat-ai { background: rgba(255,255,255,0.04) !important; color: #FFFFFF !important; border-radius: 12px !important; }
-
-    .cell-info {
-        background: rgba(96,165,250,0.06) !important;
-        border-left: 4px solid #60A5FA !important;
-        color: #FFFFFF !important;
-        border-radius: 12px !important;
+    /* ── Dataframe / table ── */
+    [data-testid="stDataFrame"] {
+        border-radius: var(--qc-radius) !important;
+        overflow: hidden !important;
+        border: 1px solid var(--qc-border) !important;
+        background: rgba(255,255,255,0.015) !important;
     }
-
-    .trend-up { color: #4ade80 !important; font-weight: bold; }
-    .trend-down { color: #f87171 !important; font-weight: bold; }
-    .trend-same { color: #6B7280 !important; }
-
-    .stPlotlyChart, .js-plotly-plot, .plot-container { background: transparent !important; }
-    .main-svg { background: transparent !important; }
-    .stPlotlyChart { border-radius: 16px !important; overflow: hidden !important; }
-
-    .st-eb, .st-ea, .st-dz, .st-dy, .st-dx { border-color: rgba(255,255,255,0.08) !important; }
-
-    .st-cx, .st-cy, .st-cz, .st-da, .st-d0, .st-d1, .st-d2, .st-d3, .st-d4 {
+    [data-testid="stDataFrame"] table {
+        background: transparent !important;
+        width: 100% !important;
+    }
+    [data-testid="stDataFrame"] th {
+        font-family: var(--qc-font) !important;
+        font-weight: 500 !important;
+        font-size: 11px !important;
+        letter-spacing: 0.02em !important;
+        text-transform: uppercase !important;
+        background: rgba(96,165,250,0.08) !important;
+        color: var(--qc-text2) !important;
+        border-bottom: 1px solid var(--qc-border) !important;
+        padding: 8px 6px !important;
+    }
+    [data-testid="stDataFrame"] td {
+        color: var(--qc-text) !important;
+        font-family: var(--qc-mono) !important;
+        font-size: 11px !important;
+        border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+        padding: 5px 6px !important;
+    }
+    [data-testid="stDataFrame"] tbody tr:hover {
         background: rgba(255,255,255,0.02) !important;
     }
 
-    .st-subheader, .stSubheader, .st-emotion-cache-18ni7ap { color: #FFFFFF !important; }
-
-    .st-cq { background: rgba(255,255,255,0.03) !important; }
-
-    div[data-testid="stPopover"] button {
-        border-radius: 16px !important;
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        color: #FFFFFF !important;
-    }
-    div[data-testid="stPopover"] button:hover {
-        background: rgba(255,255,255,0.08) !important;
-    }
-
-    .st-divider { border-color: rgba(255,255,255,0.08) !important; }
-
+    /* ── Tabs ── */
     .stTabs [data-baseweb="tab-list"] {
-        background: rgba(255,255,255,0.03) !important;
-        border-radius: 12px !important;
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: var(--qc-radius) !important;
         gap: 2px !important;
-        padding: 2px !important;
+        padding: 3px !important;
+        border: 1px solid var(--qc-border) !important;
     }
     .stTabs [data-baseweb="tab"] {
-        border-radius: 10px !important;
-        color: #9CA3AF !important;
-        font-family: 'Inter', sans-serif !important;
+        border-radius: var(--qc-radius-sm) !important;
+        color: var(--qc-text2) !important;
+        font-family: var(--qc-font) !important;
+        font-size: 13px !important;
+        padding: 6px 14px !important;
+        transition: all 0.12s ease !important;
     }
+    .stTabs [data-baseweb="tab"]:hover { color: var(--qc-text) !important; }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: rgba(96,165,250,0.15) !important;
-        color: #FFFFFF !important;
+        background: rgba(96,165,250,0.12) !important;
+        color: var(--qc-text) !important;
     }
 
-    .st-bb, .st-bc, .st-bd, .st-be, .st-bf { background: rgba(255,255,255,0.02) !important; }
+    /* ── Chart containers ── */
+    .stPlotlyChart {
+        background: rgba(255,255,255,0.015) !important;
+        border-radius: var(--qc-radius) !important;
+        padding: 6px !important;
+        border: 1px solid var(--qc-border) !important;
+    }
+    .stPlotlyChart:hover { border-color: rgba(255,255,255,0.12) !important; }
+    .js-plotly-plot, .plot-container, .main-svg { background: transparent !important; }
 
-    .stAlert { border-radius: 12px !important; }
+    /* ── Chat messages ── */
+    .chat-user {
+        background: rgba(96,165,250,0.10) !important;
+        color: var(--qc-text) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        padding: 6px 10px !important;
+    }
+    .chat-ai {
+        background: rgba(255,255,255,0.03) !important;
+        color: var(--qc-text) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        padding: 6px 10px !important;
+    }
 
-    input, textarea, .stTextInput input {
+    /* ── Cell info / reasoning panel ── */
+    .cell-info {
+        background: rgba(96,165,250,0.05) !important;
+        border-left: 3px solid var(--qc-accent) !important;
+        color: var(--qc-text) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        padding: 10px 14px !important;
+    }
+
+    /* ── Trend colors ── */
+    .trend-up { color: #4ade80 !important; font-weight: 500; }
+    .trend-down { color: #f87171 !important; font-weight: 500; }
+    .trend-same { color: var(--qc-text3) !important; }
+
+    /* ── Popover (chat) ── */
+    div[data-testid="stPopover"] button {
+        border-radius: var(--qc-radius) !important;
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid var(--qc-border) !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-font) !important;
+        padding: 0.3rem 0.8rem !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stPopover"] button:hover {
+        background: rgba(255,255,255,0.06) !important;
+        border-color: var(--qc-border-hover) !important;
+    }
+
+    /* ── Dividers ── */
+    .st-divider { border-color: var(--qc-border) !important; margin: 1.2rem 0 !important; }
+
+    /* ── Input fields ── */
+    input, textarea, .stTextInput input, .st-b7 input {
         background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 12px !important;
-        color: #FFFFFF !important;
-        font-family: 'JetBrains Mono', monospace !important;
+        border: 1px solid var(--qc-border) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        color: var(--qc-text) !important;
+        font-family: var(--qc-mono) !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
     }
     input:focus, textarea:focus {
-        border-color: #60A5FA !important;
-        box-shadow: 0 0 0 2px rgba(96,165,250,0.15) !important;
+        border-color: var(--qc-accent) !important;
+        box-shadow: 0 0 0 2px rgba(96,165,250,0.12) !important;
+    }
+    input::placeholder, textarea::placeholder { color: var(--qc-text3) !important; }
+
+    /* ── Progress bar ── */
+    .stProgress > div > div { background: var(--qc-accent) !important; }
+    .stProgress > div {
+        background: rgba(255,255,255,0.06) !important;
+        border-radius: 8px !important;
+        height: 6px !important;
     }
 
-    .st-bh, .st-bi, .st-bj { color: #FFFFFF !important; }
+    /* ── Spinner ── */
+    .st-spinner { color: var(--qc-accent) !important; }
 
-    .stProgress > div > div { background: #60A5FA !important; }
-    .stProgress > div { background: rgba(255,255,255,0.08) !important; border-radius: 8px !important; }
+    /* ── Metric ── */
+    [data-testid="stMetric"] {
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        padding: 8px 12px !important;
+        border: 1px solid var(--qc-border) !important;
+    }
+    [data-testid="stMetric"] label { color: var(--qc-text2) !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: var(--qc-text) !important; }
 
-    .st-spinner { color: #60A5FA !important; }
+    /* ── Expander ── */
+    .st-emotion-cache-1aezhbc, .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: var(--qc-radius-sm) !important;
+        border: 1px solid var(--qc-border) !important;
+        color: var(--qc-text) !important;
+    }
 
-    /* Tooltip / dropdown menu */
-    div[data-baseweb="popover"] div {
-        background: #1F2937 !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 12px !important;
+    /* ── Download button ── */
+    .stDownloadButton button {
+        background: rgba(96,165,250,0.08) !important;
+        border: 1px solid rgba(96,165,250,0.2) !important;
+        color: var(--qc-accent) !important;
     }
-    div[data-baseweb="menu"] div[role="option"] {
-        color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+    .stDownloadButton button:hover {
+        background: rgba(96,165,250,0.15) !important;
     }
-    div[data-baseweb="menu"] div[role="option"]:hover {
-        background: rgba(96,165,250,0.1) !important;
+
+    /* ── Color row backgrounds in table ── */
+    td[style*="background-color: #d4edda"] { color: #000 !important; }
+    td[style*="background-color: #fff3cd"] { color: #000 !important; }
+    td[style*="background-color: #f8d7da"] { color: #000 !important; }
+
+    /* ── Info text ── */
+    .stInfo, .stAlert, .st-cx, .st-emotion-cache-183lzjp {
+        color: var(--qc-text) !important;
     }
+
+    .st-cq, .st-cr { color: var(--qc-text2) !important; }
 </style>
 """, unsafe_allow_html=True)
 else:
