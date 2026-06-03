@@ -281,6 +281,21 @@ if theme == "Квантовое ядро":
     div[data-baseweb="select"]:hover { border-color: rgba(96,165,250,0.35) !important; }
     .stSelectbox svg { fill: var(--qc-text2) !important; }
 
+    /* Force all selectbox inner layers to dark */
+    .stSelectbox [data-baseweb="select"] > div,
+    .stSelectbox [data-baseweb="select"] > div > div,
+    .stSelectbox [data-baseweb="select"] > div > div > div,
+    .stSelectbox [data-baseweb="select"] + div,
+    .stSelectbox [class*="control"],
+    .stSelectbox [class*="valueContainer"],
+    .stSelectbox [class*="indicator"],
+    .stSelectbox [class*="placeholder"],
+    .stSelectbox [class*="singleValue"] {
+        background: transparent !important;
+        color: var(--qc-text) !important;
+    }
+    .stSelectbox [class*="indicator"] svg { fill: var(--qc-text2) !important; }
+
     div[data-baseweb="popover"] div[data-baseweb="menu"] {
         background: var(--qc-bg3) !important;
         border: 1px solid var(--qc-border) !important;
@@ -1082,6 +1097,25 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
+                            c = row['Клиент']
+                            with st.popover("📋 Подробнее", use_container_width=True):
+                                st.markdown(f"**{c}**")
+                                st.markdown(f"🗂 {row['Менеджер']}  |  📅 {end_dt}  |  Тренд: {trend_arrow}")
+                                st.markdown(f"Крит: {crit_bad} | Вспом: {aux_bad}")
+                                st.divider()
+                                det = details_map.get(c, {})
+                                for _lb, (_k, _full) in crit_cols.items():
+                                    val = str(row.get(_lb, ""))
+                                    status = "✅" if "✅" in val else "❌"
+                                    rsn = det.get(_full, {}).get("reasoning", "")
+                                    extra = f" — {rsn}" if rsn else ""
+                                    st.markdown(f"**{_full}**: {status}{extra}")
+                                st.divider()
+                                st.markdown("**📈 Анализ:** " + {
+                                    "green": "Все критерии в норме, клиент в зелёной зоне.",
+                                    "yellow": "Есть невыполненные критерии, требуется внимание.",
+                                    "red": "Критические нарушения, необходимо срочное вмешательство."
+                                }.get(color, ""))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
