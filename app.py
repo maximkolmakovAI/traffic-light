@@ -310,29 +310,39 @@ if theme == "Квантовое ядро":
     }
     .stSelectbox [class*="indicator"] svg { fill: var(--qc-text2) !important; }
 
-    ul[data-baseweb="menu"],
+    /* Every possible select dropdown surface */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
     div[data-baseweb="popover"] ul,
-    div[data-baseweb="popover"] div[role="listbox"],
     div[data-baseweb="popover"] div[data-baseweb="menu"],
-    ul[role="listbox"] {
+    div[data-baseweb="popover"] div[role="listbox"],
+    ul[data-baseweb="menu"],
+    ul[role="listbox"],
+    div[role="listbox"] {
         background: #1F2937 !important;
         border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
     }
+    /* Every dropdown option */
+    div[data-baseweb="popover"] li,
+    div[data-baseweb="popover"] div[role="option"],
+    div[data-baseweb="menu"] div[role="option"],
     li[role="option"],
     div[role="option"],
-    div[data-baseweb="menu"] div[role="option"],
     ul[role="listbox"] li {
         color: #FFFFFF !important;
         font-family: 'Inter', sans-serif !important;
         font-size: 13px !important;
         padding: 6px 12px !important;
+        background: transparent !important;
     }
+    div[data-baseweb="popover"] li:hover,
+    div[data-baseweb="popover"] div[role="option"]:hover,
     li[role="option"]:hover,
     div[role="option"]:hover {
         background: rgba(96,165,250,0.08) !important;
     }
+    div[data-baseweb="popover"] li[aria-selected="true"],
+    div[data-baseweb="popover"] div[role="option"][aria-selected="true"],
     li[role="option"][aria-selected="true"],
     div[role="option"][aria-selected="true"] {
         background: rgba(96,165,250,0.12) !important;
@@ -612,8 +622,15 @@ if theme == "Квантовое ядро":
         border-radius: 10px !important;
     }
     /* Fix white input area inside selectbox */
-    .stSelectbox [data-baseweb="select"] > div {
+    .stSelectbox [data-baseweb="select"] > div,
+    .stSelectbox [data-baseweb="select"] > div > div,
+    .stSelectbox [data-baseweb="select"] div[class*="control"],
+    .stSelectbox [data-baseweb="select"] div[class*="valueContainer"] {
         background: #1a2332 !important;
+    }
+    .stSelectbox [data-baseweb="select"] div[class*="singleValue"],
+    .stSelectbox [data-baseweb="select"] div[class*="placeholder"] {
+        color: #FFFFFF !important;
     }
     /* Ensure the dropdown toggle button has matching dark bg */
     .stSelectbox [data-baseweb="select"] [role="button"],
@@ -1176,7 +1193,7 @@ with tab_main:
                             </div>
                             """, unsafe_allow_html=True)
                             if st.button("📋", key=f"qd_{i+j}", use_container_width=True):
-                                st.session_state.client_sel = row['Клиент']
+                                st.session_state.client_sel = str(row['Клиент'])
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
