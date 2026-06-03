@@ -106,9 +106,10 @@ st.markdown(f"""
         font-weight:bold !important; transform:scale(1.03);
     }}
     html body span[class*="material"] {{ display: none !important; }}
-    /* Aggressive popover icon hide */
     div[data-testid="stPopover"] button > span:not(:first-child) {{ display: none !important; }}
     div[data-testid="stPopover"] button svg {{ display: none !important; }}
+    /* Dialog styling */
+    div[data-testid="stDialog"] > div {{ background: var(--qc-bg2,#fff) !important; color: var(--qc-text,#000) !important; border-radius: var(--qc-radius,14px) !important; padding: 20px !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -840,6 +841,18 @@ def render_color_row(row, fdf):
     return [f"background-color: {bg}"] * len(row)
 
 
+# ── Client detail dialog ──
+@st.dialog("📋 Детали клиента")
+def client_detail(cname, detmap, ccols):
+    det = detmap.get(cname, {})
+    st.markdown(f"**{cname}**")
+    for _lb, (_k, _full) in ccols.items():
+        rsn = det.get(_full, {}).get("reasoning", "")
+        st.markdown(f"- **{_full}**{' — ' + rsn[:300] if rsn else ''}")
+    if st.button("✕ Закрыть", use_container_width=True):
+        st.rerun()
+
+
 def async_ai(user_msg, history_copy):
     try:
         from ai_assistant import ask_ai
@@ -1091,6 +1104,7 @@ with tab_main:
             display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
                             "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы",
                             "Крит", "Вспом"]
+
             if theme == "Квантовое ядро":
                 for i in range(0, len(fdf), 3):
                     cols = st.columns(3)
@@ -1132,7 +1146,7 @@ with tab_main:
                             """, unsafe_allow_html=True)
                             st.button("📋", key=f"qd_{row['Клиент']}",
                                       use_container_width=True,
-                                      on_click=lambda n=row['Клиент']: st.session_state.update(client_sel=n))
+                                      on_click=lambda n=row['Клиент'], dm=details_map, cc=crit_cols: client_detail(n, dm, cc))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
