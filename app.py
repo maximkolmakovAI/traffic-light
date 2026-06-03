@@ -1192,8 +1192,10 @@ with tab_main:
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            if st.button("📋", key=f"qd_{i+j}", use_container_width=True):
-                                st.session_state.client_sel = str(row['Клиент'])
+                            st.button("📋", key=f"qd_{i+j}", use_container_width=True,
+                                      on_click=lambda n=str(row['Клиент']): (
+                                          st.session_state.__setitem__('client_sel', n)
+                                      ))
             else:
                 styled = fdf[display_cols].style.apply(lambda row: render_color_row(row, fdf), axis=1)
                 st.dataframe(styled, use_container_width=True, height=560,
