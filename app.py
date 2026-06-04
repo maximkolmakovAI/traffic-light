@@ -8,7 +8,6 @@ from pathlib import Path
 from datetime import datetime, date
 
 from db.database import init_db, get_conn
-from db.seed import seed_demo_data
 from etl.loader import run_all_etl
 from etl.single_load import load_file_by_buffer, load_file_by_path, check_conflicts, resolve_conflicts
 from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client, get_transitions, get_client_color_in_snapshot
@@ -1378,7 +1377,6 @@ tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
 ])
 
 with tab_upload_single:
-    st.info("⚠️ **Недоступно в тестовой версии.**")
     uploaded_file = st.file_uploader("Выберите Excel-файл отчета", type=["xls", "xlsx"], key="single_upload")
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
@@ -1423,7 +1421,6 @@ with tab_upload_single:
                         st.error(f"Ошибка: {result.get('error','')}")
 
 with tab_upload_folder:
-    st.info("⚠️ **Недоступно в тестовой версии.**")
     folder_path = st.text_input("Путь к папке",
         value=str(Path(r"C:\AI_ALL\Разработка 1С на OpenCode\Анализ отчетов для Вали\Исходные отчеты")),
         key="folder_path_input")
@@ -1479,8 +1476,9 @@ with tab_main:
         with st.spinner("Загрузка…"):
             try:
                 run_all_etl(clear_first=True)
-            except Exception:
-                seed_demo_data()
+            except Exception as e:
+                st.error(f"Ошибка при загрузке: {e}")
+                st.stop()
         with st.spinner("Расчет светофора…"):
             calculate_traffic_light()
         st.session_state["_refresh"] = True
