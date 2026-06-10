@@ -1,0 +1,26 @@
+{
+  "4703158285": {
+    "status": "LIQUIDATING",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-10T17:45:47.010010",
+    "inn": "4703158285",
+    "name": "ООО \"КВАЗАР-ТУР\""
+  },
+  "890506473201": {
+    "status": "LIQUIDATED",
+    "liquidation_date": 1776729600000,
+    "source": "dadata",
+    "checked_date": "2026-06-10T17:45:47.416091",
+    "inn": "890506473201",
+    "name": "ИП Емельянова Анастасия Валерьевна"
+  },
+  "7707083893": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-10T17:45:47.867352",
+    "inn": "7707083893",
+    "name": "ПАО СБЕРБАНК"
+  }
+}

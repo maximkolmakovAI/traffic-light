@@ -11,6 +11,7 @@ from etl.load_complaints import load_complaints
 from etl.load_orders import load_orders
 from etl.load_unsigned_docs import load_unsigned_docs
 from etl.load_invoices import load_invoices
+from etl.load_liquidation import load_liquidation
 
 
 def check_conflicts(file_type, period):
@@ -81,6 +82,16 @@ def check_conflicts(file_type, period):
                 "message": f"В базе уже есть {count} записей счетов на продление",
             })
 
+    elif file_type == "liquidation":
+        cur = conn.execute("SELECT COUNT(*) FROM liquidation_data")
+        count = cur.fetchone()[0]
+        if count > 0:
+            conflicts.append({
+                "table": "liquidation_data",
+                "count": count,
+                "message": f"В базе уже есть {count} записей о ликвидации",
+            })
+
     conn.close()
     return conflicts
 
@@ -102,6 +113,9 @@ def resolve_conflicts(file_type, period, resolution, upload_id):
             conn.execute("DELETE FROM unsigned_docs")
         elif file_type == "invoices":
             conn.execute("DELETE FROM renewal_invoices")
+
+        elif file_type == "liquidation":
+            conn.execute("DELETE FROM liquidation_data")
 
         conn.execute("DELETE FROM source_uploads WHERE file_type=? AND (period=? OR period IS NULL)",
                      (file_type, period or ""))
@@ -184,6 +198,8 @@ def _execute_load(source, detection, upload_id, resolution):
             cnt = load_unsigned_docs(source=source, **kwargs)
         elif ft == "invoices":
             cnt = load_invoices(source=source, **kwargs)
+        elif ft == "liquidation":
+            cnt = load_liquidation(source=source, **kwargs)
         else:
             cnt = 0
 

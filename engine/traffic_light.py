@@ -4,6 +4,7 @@ from engine.criteria import (
     check_crit_event_quarter, check_crit_no_complaints,
     check_crit_no_rejected_orders, check_crit_event_before_end,
     check_crit_invoice_before_end, check_crit_no_unsigned_docs,
+    check_crit_liquidation,
 )
 
 COLOR_GREEN = "green"
@@ -17,6 +18,7 @@ CRITERIA_SPEC = [
     {"id": "crit_event_before_end", "name": "Событие за 2 мес до окончания", "critical": True},
     {"id": "crit_invoice_before_end", "name": "Счет на продление за 2 мес до окончания", "critical": True},
     {"id": "crit_no_unsigned_docs", "name": "Отсутствие неподписанных документов", "critical": False},
+    {"id": "crit_liquidation", "name": "Ликвидация", "critical": True},
 ]
 
 def save_snapshot(conn, period_label):
@@ -139,8 +141,11 @@ def calculate_traffic_light(period_label=None):
         ok, reason = check_crit_no_unsigned_docs(conn, cname)
         details["crit_no_unsigned_docs"] = {"ok": 1 if ok else 0, "reason": reason}
 
+        ok, reason = check_crit_liquidation(conn, cname)
+        details["crit_liquidation"] = {"ok": 1 if ok else 0, "reason": reason}
+
         critical_bad = sum(
-            1 for k in ["crit_event_quarter", "crit_event_before_end", "crit_invoice_before_end"]
+            1 for k in ["crit_event_quarter", "crit_event_before_end", "crit_invoice_before_end", "crit_liquidation"]
             if details[k]["ok"] == 0
         )
         auxiliary_bad = sum(
@@ -155,8 +160,9 @@ def calculate_traffic_light(period_label=None):
                 (client_id, client_name, manager, contract_end, calc_date, period_label,
                  crit_event_quarter, crit_no_complaints, crit_no_rejected_orders,
                  crit_event_before_end, crit_invoice_before_end, crit_no_unsigned_docs,
+                 crit_liquidation,
                  critical_bad, auxiliary_bad, final_color)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             cid, cname, str(manager) if manager else "", str(cend) if cend else "",
             now_str, period_label,
@@ -166,6 +172,7 @@ def calculate_traffic_light(period_label=None):
             details["crit_event_before_end"]["ok"],
             details["crit_invoice_before_end"]["ok"],
             details["crit_no_unsigned_docs"]["ok"],
+            details["crit_liquidation"]["ok"],
             critical_bad, auxiliary_bad, final_color,
         ))
 

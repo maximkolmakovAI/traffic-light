@@ -168,11 +168,27 @@ def init_db():
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS liquidation_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            inn TEXT,
+            liquidation_status TEXT DEFAULT 'unknown',
+            liquidation_date TEXT,
+            check_date TEXT,
+            source TEXT DEFAULT 'dadata',
+            upload_id INTEGER,
+            source_filename TEXT
+        )
+    """)
+
     for t in ["events", "complaints", "rejected_orders", "renewal_invoices", "unsigned_docs"]:
         _ensure_col(conn, t, "source_filename", "source_filename TEXT")
 
     for t in ["events", "complaints", "rejected_orders"]:
         _ensure_col(conn, t, "source_filename", "source_filename TEXT")
+
+    _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 0")
 
     indices = [
         ("idx_events_client", "events", "client_name"),

@@ -1,5 +1,70 @@
 ﻿from datetime import datetime, date
 from db.database import get_conn
+from etl.egrul_checker import check_by_inn
+
+
+def check_crit_liquidation(conn, client_name):
+    cur = conn.execute("SELECT inn FROM clients WHERE name = ?", (client_name,))
+    row = cur.fetchone()
+    inn = str(row[0]).strip() if row and row[0] and str(row[0]) not in ("", "nan", "None") else ""
+
+    if not inn:
+        return True, "Нет ИНН для проверки"
+
+    # check DB first
+    cur = conn.execute(
+        "SELECT liquidation_status, check_date FROM liquidation_data WHERE inn = ? ORDER BY id DESC LIMIT 1",
+        (inn,),
+    )
+    db_row = cur.fetchone()
+    if db_row:
+        status = db_row[0]
+        check_date_str = db_row[1]
+        try:
+            check_dt = datetime.fromisoformat(check_date_str) if check_date_str else None
+        except Exception:
+            check_dt = None
+        from config import LIQUIDATION_CACHE_DAYS
+        if check_dt and (datetime.now() - check_dt).days < LIQUIDATION_CACHE_DAYS:
+            if status in ("LIQUIDATING", "LIQUIDATED", "BANKRUPT", "REORGANIZING"):
+                return False, _liq_reason(status, db_row)
+            return True, _liq_reason(status, db_row)
+
+    result = check_by_inn(inn)
+    status = result.get("status", "unknown")
+    liq_date = result.get("liquidation_date")
+
+    conn.execute(
+        """INSERT INTO liquidation_data (client_name, inn, liquidation_status, liquidation_date, check_date, source)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (client_name, inn, status, liq_date, datetime.now().isoformat(), result.get("source", "dadata")),
+    )
+    conn.commit()
+
+    if status in ("LIQUIDATING", "LIQUIDATED", "BANKRUPT", "REORGANIZING"):
+        return False, _liq_reason(status, {"liquidation_status": status, "liquidation_date": liq_date})
+    return True, _liq_reason(status, {"liquidation_status": status, "liquidation_date": liq_date})
+
+
+def _liq_reason(status, row):
+    status_labels = {
+        "ACTIVE": "действующая",
+        "LIQUIDATING": "в процессе ликвидации",
+        "LIQUIDATED": "ликвидирована",
+        "BANKRUPT": "банкротство",
+        "REORGANIZING": "реорганизация/присоединение",
+        "unknown": "статус не определён",
+    }
+    label = status_labels.get(status, status)
+    liq_date = row.get("liquidation_date") if isinstance(row, dict) else (row[2] if len(row) > 2 else "")
+    if liq_date:
+        try:
+            ts_ms = int(liq_date)
+            d = datetime.fromtimestamp(ts_ms / 1000).strftime("%d.%m.%Y")
+            return f"{label} ({d})"
+        except (ValueError, TypeError):
+            return f"{label} ({liq_date})"
+    return label
 
 def check_crit_event_quarter(conn, client_name):
     cur = conn.execute("""

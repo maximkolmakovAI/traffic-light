@@ -1230,6 +1230,7 @@ def load_traffic_data():
                t.crit_event_quarter, t.crit_no_complaints,
                t.crit_no_rejected_orders, t.crit_event_before_end,
                t.crit_invoice_before_end, t.crit_no_unsigned_docs,
+               t.crit_liquidation,
                t.critical_bad AS "Крит",
                t.auxiliary_bad AS "Вспом",
                t.final_color AS "Цвет"
@@ -1246,6 +1247,7 @@ def load_traffic_data():
         "Соб.2мес": ("crit_event_before_end", "Событие за 2 мес до окончания"),
         "Счет": ("crit_invoice_before_end", "Счет на продление за 2 мес до окончания"),
         "Документы": ("crit_no_unsigned_docs", "Отсутствие неподписанных документов"),
+        "Ликвидация": ("crit_liquidation", "Ликвидация"),
     }
 
     rows = []
@@ -1507,7 +1509,7 @@ with tab_main:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
-                crit_filter_opts = ["Все", "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы"]
+                crit_filter_opts = ["Все", "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы", "Ликвидация"]
                 selected_crit = st.selectbox("Критерий нарушен", crit_filter_opts, key="crit_f", label_visibility="collapsed")
             with flt3:
                 show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
@@ -1563,6 +1565,7 @@ with tab_main:
             # ── Display ──
             display_cols = ["Тренд", "Клиент", "Менеджер", "Окончание",
                             "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы",
+                            "Ликвидация",
                             "Крит", "Вспом"]
 
             if theme == "Квантовое ядро":
@@ -1577,7 +1580,7 @@ with tab_main:
                         aux_bad = int(row.get("Вспом", 0))
 
                         crit_rows = ""
-                        labels = ["Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы"]
+                        labels = ["Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы", "Ликвидация"]
                         for i2, clabel in enumerate(labels):
                             val = str(row.get(clabel, ""))
                             passed = val.startswith("✅")
@@ -1695,6 +1698,7 @@ with tab_main:
                     ("Событие за 2 мес", "crit_event_before_end"),
                     ("Счет на продление", "crit_invoice_before_end"),
                     ("Неподписанные док-ты", "crit_no_unsigned_docs"),
+                    ("Ликвидация", "crit_liquidation"),
                 ]
                 for cname, ccol in crit_query:
                     cur = conn2.execute(f"SELECT COUNT(*) as cnt FROM traffic_light_results WHERE {ccol}=0")

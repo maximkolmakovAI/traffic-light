@@ -10,6 +10,7 @@ FILE_RULES = [
     (re.compile(r"(наряд|отсутсвие\s*нарядов|отклонен\s*клиентом)", re.IGNORECASE), "orders", None, "Наряды (отклонен клиентом)"),
     (re.compile(r"неподписанн", re.IGNORECASE), "unsigned_docs", None, "Неподписанные документы"),
     (re.compile(r"счет[аы]\s*на\s*продлен", re.IGNORECASE), "invoices", None, "Счета на продление"),
+    (re.compile(r"ликвидац", re.IGNORECASE), "liquidation", None, "Ликвидация"),
 ]
 
 STRUCTURE_RULES = {
@@ -19,6 +20,7 @@ STRUCTURE_RULES = {
     "orders": {"min_cols": 3, "keywords": ["контрагент", "статус наряда"]},
     "unsigned_docs": {"min_cols": 10, "keywords": ["реализация", "подразделение"]},
     "invoices": {"min_cols": 5, "keywords": ["счет", "сумма", "продл"]},
+    "liquidation": {"min_cols": 2, "keywords": ["инн", "ликвидац"]},
 }
 
 
