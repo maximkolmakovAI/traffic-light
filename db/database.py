@@ -188,7 +188,7 @@ def init_db():
     for t in ["events", "complaints", "rejected_orders"]:
         _ensure_col(conn, t, "source_filename", "source_filename TEXT")
 
-    _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 0")
+    _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 1")
 
     indices = [
         ("idx_events_client", "events", "client_name"),
