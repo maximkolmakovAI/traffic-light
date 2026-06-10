@@ -5,7 +5,7 @@ import warnings
 import requests
 from datetime import datetime
 from pathlib import Path
-from config import BASE_DIR, LIQUIDATION_CACHE_DAYS
+from config import BASE_DIR, DADATA_TOKEN, LIQUIDATION_CACHE_DAYS
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 try:
@@ -18,11 +18,13 @@ CACHE_FILE = BASE_DIR / "data" / "liquidation_cache.json"
 
 
 def _get_token():
+    if DADATA_TOKEN:
+        return DADATA_TOKEN
     try:
         import streamlit as st
-        return st.secrets.get("DADATA_TOKEN") or os.environ.get("DADATA_TOKEN") or ""
+        return st.secrets.get("DADATA_TOKEN") or ""
     except Exception:
-        return os.environ.get("DADATA_TOKEN", "")
+        return ""
 
 
 def _load_cache():

@@ -7,6 +7,7 @@ DB_PATH = DATA_DIR / "traffic_light.db"
 
 SOURCE_DIR = BASE_DIR / "data" / "source"
 
+DADATA_TOKEN = os.environ.get("DADATA_TOKEN", "")
 LIQUIDATION_CACHE_DAYS = 2  # re-check after 2 days
 
 CRITERIA = [
