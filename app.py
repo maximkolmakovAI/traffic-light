@@ -1346,15 +1346,9 @@ with th_col1:
     st.radio("", ["Базовый режим", "Квантовое ядро"], key="theme_sel",
              horizontal=True, label_visibility="collapsed")
 
-# ── Universe greeting ──
+# ── Wisdom quote (replaces universe greeting) ──
 st.markdown(
-    f"<div class='greeting-card'>✨ {_strip_vs(greeting)}</div>",
-    unsafe_allow_html=True,
-)
-
-# ── Wisdom quote ──
-st.markdown(
-    f"<div class='wisdom-card'>{_strip_vs(_wq)}</div>",
+    f"<div class='greeting-card'>{_strip_vs(_wq)}</div>",
     unsafe_allow_html=True,
 )
 
