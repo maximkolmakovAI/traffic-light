@@ -1533,6 +1533,60 @@ with tab_db:
         st.success("Готово!")
         st.rerun()
 
+    # ── Batch liquidation check ──
+    st.divider()
+    st.markdown("**🧪 Проверка ликвидации по всем ИНН**")
+    from etl.egrul_checker import _get_token, check_by_inn
+    if not _get_token():
+        st.warning("⚠️ DADATA_TOKEN не настроен. "
+                   "Проверка будет пропущена (все ИНН получат статус 'unknown' → ✅). "
+                   "Добавьте токен в Streamlit Secrets или переменную окружения.")
+
+    if st.button("▶️ Запустить проверку всех ИНН", use_container_width=True):
+        st.session_state["liq_inns"] = None
+        st.session_state["liq_done"] = 0
+        st.session_state["liq_total"] = 0
+        st.session_state["liq_running"] = True
+        st.rerun()
+
+    if st.session_state.get("liq_running"):
+        conn = get_conn()
+        if st.session_state["liq_inns"] is None:
+            cur = conn.execute(
+                "SELECT DISTINCT inn FROM clients WHERE inn NOT IN ('', 'nan', 'None') AND inn IS NOT NULL"
+            )
+            inns = [r[0] for r in cur.fetchall()]
+            st.session_state["liq_inns"] = inns
+            st.session_state["liq_total"] = len(inns)
+            st.session_state["liq_done"] = 0
+        conn.close()
+
+        inns = st.session_state["liq_inns"]
+        done = st.session_state["liq_done"]
+        total = st.session_state["liq_total"]
+        chunk_size = 50
+
+        pb = st.progress(done / total if total > 0 else 0,
+                         text=f"Проверка… {done}/{total}")
+        chunk = inns[done:done + chunk_size]
+        for inn in chunk:
+            try:
+                check_by_inn(inn)
+            except Exception:
+                pass
+            time.sleep(0.3)
+
+        st.session_state["liq_done"] = done + len(chunk)
+
+        if st.session_state["liq_done"] >= total:
+            st.session_state["liq_running"] = False
+            with st.spinner("Пересчёт светофора…"):
+                calculate_traffic_light()
+            st.success(f"✅ Проверено {total} ИНН!")
+            st.rerun()
+        else:
+            st.rerun()
+
 with tab_main:
     conn = get_conn()
     db_total = conn.execute("SELECT COUNT(*) FROM traffic_light_results").fetchone()[0]
