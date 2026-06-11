@@ -190,6 +190,29 @@ def init_db():
 
     _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 1")
 
+    # If there are old rows with crit_liquidation=0 that were never calculated
+    # (no corresponding entry in traffic_light_details for the liquidation criterion),
+    # reset them to 1 so they don't show incorrect ❌.
+    cur = conn.execute("""
+        SELECT COUNT(*) FROM traffic_light_results r
+        WHERE r.crit_liquidation = 0
+        AND NOT EXISTS (
+            SELECT 1 FROM traffic_light_details d
+            WHERE d.client_name = r.client_name AND d.criterion_id = 'crit_liquidation'
+        )
+    """)
+    uncalculated = cur.fetchone()[0]
+    if uncalculated > 0:
+        conn.execute("""
+            UPDATE traffic_light_results
+            SET crit_liquidation = 1
+            WHERE crit_liquidation = 0
+            AND NOT EXISTS (
+                SELECT 1 FROM traffic_light_details d
+                WHERE d.client_name = traffic_light_results.client_name AND d.criterion_id = 'crit_liquidation'
+            )
+        """)
+
     indices = [
         ("idx_events_client", "events", "client_name"),
         ("idx_events_period", "events", "period"),

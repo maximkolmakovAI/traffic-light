@@ -453,8 +453,14 @@ WISDOM_QUOTES = [
 ]
 _wq = random.choice(WISDOM_QUOTES).format(n=_NAME)
 
+
+def _strip_vs(s):
+    """Strip Unicode variation selectors that cause encoding issues in Streamlit Cloud."""
+    return s.encode("ascii", "xmlcharrefreplace").decode("ascii")
+
+
 def _h(s):
-    return str(s).replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;").replace(">","&gt;")
+    return _strip_vs(str(s)).replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;").replace(">","&gt;")
 
 theme = st.session_state.get("theme_sel", "Базовый режим")
 
@@ -1331,13 +1337,13 @@ with th_col1:
 
 # ── Universe greeting ──
 st.markdown(
-    f"<div class='greeting-card'>\u2728 {greeting}</div>",
+    f"<div class='greeting-card'>✨ {_strip_vs(greeting)}</div>",
     unsafe_allow_html=True,
 )
 
 # ── Wisdom quote ──
 st.markdown(
-    f"<div class='wisdom-card'>💡 {_wq}</div>",
+    f"<div class='wisdom-card'>{_strip_vs(_wq)}</div>",
     unsafe_allow_html=True,
 )
 
