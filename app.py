@@ -470,10 +470,10 @@ theme = st.session_state.get("theme_sel", "Базовый режим")
 # ── Common CSS (layout, table widths — always applied) ──
 st.markdown(f"""
 <style>
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {{ gap:0.15rem; }}
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {{ gap:0.05rem; }}
     .css-1offfwp {{ padding:0.5rem !important; }}
-    .main > div {{ max-width:100% !important; padding-left:0.3rem !important; padding-right:0.3rem !important; }}
-    .block-container {{ padding:0.5rem 0.3rem !important; max-width:100% !important; }}
+    .main > div {{ max-width:100% !important; padding-left:0.1rem !important; padding-right:0.1rem !important; }}
+    .block-container {{ padding:0.2rem 0.3rem !important; max-width:100% !important; }}
     [data-testid="column"] > div > div > div > div > div > div[data-testid="stDataFrame"] > div {{
         width:100% !important;
     }}
@@ -624,8 +624,8 @@ if theme == "Квантовое ядро":
         -webkit-backdrop-filter: blur(10px) !important;
         border: 1px solid rgba(255,255,255,0.06) !important;
         border-radius: var(--qc-radius) !important;
-        padding: 14px 20px !important;
-        margin-bottom: 8px !important;
+        padding: 6px 14px !important;
+        margin-bottom: 4px !important;
         box-shadow:
             rgba(255,255,255,0.03) 0px 1px 0px 0px inset,
             rgba(0,0,0,0.4) 0px 4px 16px 0px,
@@ -642,8 +642,8 @@ if theme == "Квантовое ядро":
         -webkit-backdrop-filter: blur(10px) !important;
         border: 1px solid rgba(250,204,21,0.10) !important;
         border-radius: var(--qc-radius) !important;
-        padding: 10px 20px !important;
-        margin-bottom: 16px !important;
+        padding: 4px 14px !important;
+        margin-bottom: 4px !important;
         box-shadow:
             rgba(255,255,255,0.02) 0px 1px 0px 0px inset,
             rgba(0,0,0,0.3) 0px 2px 8px 0px !important;
@@ -1205,12 +1205,20 @@ else:
         background: rgba(255,255,255,0.15);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        border-radius: 1rem;
-        padding: 0.8rem 1.2rem;
-        margin-bottom: 0.5rem;
+        border-radius: 0.6rem;
+        padding: 0.25rem 0.8rem;
+        margin-bottom: 0.2rem;
         border: 1px solid rgba(255,255,255,0.3);
-        font-size: 0.95rem;
+        font-size: 0.78rem;
         text-align: center;
+    }}
+    .wisdom-card {{
+        padding: 0.15rem 0.8rem;
+        margin-bottom: 0.2rem;
+        font-size: 0.72rem;
+        text-align: center;
+        font-style: italic;
+        opacity: 0.85;
     }}
     {dark_adjust}
 </style>
@@ -1383,8 +1391,8 @@ with st.popover("💬 Чат с ИИ", use_container_width=True):
         t.start()
         st.rerun()
 
-tab_main, tab_upload_single, tab_upload_folder, tab_info = st.tabs([
-    "📊 Светофор", "📂 Загрузить файл", "📁 Загрузить папку", "ℹ️ Описание"
+tab_main, tab_upload_single, tab_upload_folder, tab_db, tab_info = st.tabs([
+    "📊 Светофор", "📂 Загрузить файл", "📁 Загрузить папку", "🗄️ Управление БД", "ℹ️ Описание"
 ])
 
 with tab_upload_single:
@@ -1466,12 +1474,52 @@ with tab_upload_folder:
                 st.success("Готово!")
                 st.rerun()
 
+with tab_db:
+    st.subheader("🗄️ Управление базой данных")
+    db_exists = DB_PATH.exists()
+    c1, c2 = st.columns(2)
+    with c1:
+        if db_exists:
+            with open(DB_PATH, "rb") as f:
+                st.download_button("💾 Скачать резервную копию БД", f.read(),
+                                   "traffic_light_backup.db", "application/octet-stream",
+                                   use_container_width=True)
+        else:
+            st.caption("База данных ещё не создана")
+    with c2:
+        uploaded_db = st.file_uploader("Восстановить из резервной копии",
+                                       type=["db"], key="db_restore", label_visibility="collapsed")
+        if uploaded_db is not None:
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            DB_PATH.write_bytes(uploaded_db.read())
+            st.success("✅ База восстановлена! Перезапустите приложение.")
+
+    if not _IS_CLOUD and st.button("🔄 Полная загрузка (ETL)", use_container_width=True):
+        with st.spinner("Загрузка…"):
+            try:
+                run_all_etl(clear_first=True)
+            except Exception as e:
+                st.error(f"Ошибка при загрузке: {e}")
+                st.stop()
+        with st.spinner("Расчет светофора…"):
+            calculate_traffic_light()
+        st.success("Готово!")
+        st.rerun()
+
 with tab_main:
     conn = get_conn()
     db_total = conn.execute("SELECT COUNT(*) FROM traffic_light_results").fetchone()[0]
     counts_data = conn.execute(
         "SELECT final_color, COUNT(*) as cnt FROM traffic_light_results GROUP BY final_color"
     ).fetchall()
+
+    # ── Data freshness ──
+    fresh_data = conn.execute("""
+        SELECT file_type, file_name, upload_date
+        FROM source_uploads
+        WHERE status = 'completed' AND file_type != 'batch'
+        ORDER BY upload_date DESC
+    """).fetchall()
     conn.close()
     counts = {"green": 0, "yellow": 0, "red": 0}
     for r in counts_data:
@@ -1481,48 +1529,27 @@ with tab_main:
         st.warning(f"⚠️ В базе всего {total} записей (ожидается ~2854). "
                    "Загрузите файлы через вкладки «Загрузить файл» или «Загрузить папку».")
 
-    if _IS_CLOUD:
-        db_exists = DB_PATH.exists()
-        bc1, bc2 = st.columns(2)
-        with bc1:
-            if db_exists:
-                with open(DB_PATH, "rb") as f:
-                    st.download_button("💾 Скачать БД", f.read(), "traffic_light_backup.db",
-                                       "application/octet-stream", use_container_width=True)
-            else:
-                st.caption("💾 База ещё не создана")
-        with bc2:
-            uploaded_db = st.file_uploader("Восстановить из резервной копии",
-                                           type=["db"], key="db_restore", label_visibility="collapsed")
-            if uploaded_db is not None:
-                DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-                DB_PATH.write_bytes(uploaded_db.read())
-                st.success("✅ База восстановлена! Перезапустите приложение.")
-        if st.button("📊 Пересчитать светофор", use_container_width=True):
-            with st.spinner("Расчет…"):
-                calculate_traffic_light()
-            st.session_state["_refresh"] = True
-            st.rerun()
-    else:
-        col1, col2 = st.columns(2)
-        if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
-            with st.spinner("Загрузка…"):
-                try:
-                    run_all_etl(clear_first=True)
-                except Exception as e:
-                    st.error(f"Ошибка при загрузке: {e}")
-                    st.stop()
-            with st.spinner("Расчет светофора…"):
-                calculate_traffic_light()
-            st.session_state["_refresh"] = True
-            st.success("Готово!")
-            st.rerun()
-        if col2.button("📊 Пересчитать светофор", use_container_width=True):
-            with st.spinner("Расчет…"):
-                calculate_traffic_light()
-            st.session_state["_refresh"] = True
-            st.success("Готово!")
-            st.rerun()
+    if fresh_data:
+        seen = set()
+        parts = []
+        for r in fresh_data:
+            t = r["file_type"]
+            if t not in seen:
+                seen.add(t)
+                d = r["upload_date"][:10] if r["upload_date"] else "?"
+                label = {"clients": "клиенты", "events": "события", "complaints": "жалобы",
+                         "orders": "наряды", "unsigned_docs": "документы", "invoices": "счета",
+                         "liquidation": "ликвидация"}.get(t, t)
+                parts.append(f"{label}: {d}")
+        date_str = " | ".join(parts)
+        st.markdown(f"<div style='text-align:right;font-size:0.65rem;color:#888;margin-bottom:2px'>{date_str}</div>",
+                    unsafe_allow_html=True)
+
+    if st.button("📊 Пересчитать светофор", use_container_width=True):
+        with st.spinner("Расчет…"):
+            calculate_traffic_light()
+        st.session_state["_refresh"] = True
+        st.rerun()
 
     if total > 0:
         # ── Cache data ──
