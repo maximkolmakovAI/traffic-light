@@ -1476,6 +1476,33 @@ with tab_upload_folder:
 
 with tab_db:
     st.subheader("🗄️ Управление базой данных")
+
+    # ── Liquidation check status ──
+    conn = get_conn()
+    cur = conn.execute("SELECT COUNT(*) FROM clients WHERE inn NOT IN ('', 'nan', 'None') AND inn IS NOT NULL")
+    total_inns = cur.fetchone()[0]
+    cur = conn.execute("SELECT COUNT(DISTINCT inn) FROM liquidation_data")
+    checked = cur.fetchone()[0]
+    unchecked = total_inns - checked if total_inns > checked else 0
+    cur = conn.execute("SELECT liquidation_status, COUNT(*) as c FROM liquidation_data GROUP BY liquidation_status")
+    dist = {r[0]: r[1] for r in cur.fetchall()}
+    conn.close()
+
+    st.markdown(
+        f"<div style='font-size:0.8rem'>"
+        f"<b>Проверка ликвидации:</b> всего с ИНН {total_inns}, "
+        f"проверено {checked}, осталось {unchecked}. "
+        f"{'🟢' if unchecked == 0 else '🟡'} "
+        f"ACTIVE: {dist.get('ACTIVE', 0)}, "
+        f"LIQUIDATING: {dist.get('LIQUIDATING', 0)}, "
+        f"LIQUIDATED: {dist.get('LIQUIDATED', 0)}, "
+        f"BANKRUPT: {dist.get('BANKRUPT', 0)}, "
+        f"REORGANIZING: {dist.get('REORGANIZING', 0)}, "
+        f"unknown: {dist.get('unknown', 0)}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
     db_exists = DB_PATH.exists()
     c1, c2 = st.columns(2)
     with c1:
