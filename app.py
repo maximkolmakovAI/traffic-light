@@ -11,6 +11,9 @@ from db.database import init_db, get_conn
 from etl.loader import run_all_etl
 from etl.single_load import load_file_by_buffer, load_file_by_path, check_conflicts, resolve_conflicts
 from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client, get_transitions, get_client_color_in_snapshot
+from config import DB_PATH
+
+_IS_CLOUD = "/mount/src/" in __file__
 
 st.set_page_config(page_title="Светофор по клиентам", page_icon="🚦", layout="wide")
 
@@ -1476,29 +1479,50 @@ with tab_main:
     total = sum(counts.values())
     if total < 100:
         st.warning(f"⚠️ В базе всего {total} записей (ожидается ~2854). "
-                   "Возможно, данные были сброшены при перезапуске облачного приложения. "
-                   "Нажмите кнопку «🔄 Полная загрузка (ETL)» для загрузки данных из исходных файлов.")
+                   "Загрузите файлы через вкладки «Загрузить файл» или «Загрузить папку».")
 
-    col1, col2 = st.columns(2)
-    if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
-        with st.spinner("Загрузка…"):
-            try:
-                run_all_etl(clear_first=True)
-            except Exception as e:
-                st.error(f"Ошибка при загрузке: {e}")
-                st.stop()
-        with st.spinner("Расчет светофора…"):
-            calculate_traffic_light()
-        st.session_state["_refresh"] = True
-        st.success("Готово!")
-        st.rerun()
-
-    if col2.button("📊 Пересчитать светофор", use_container_width=True):
-        with st.spinner("Расчет…"):
-            calculate_traffic_light()
-        st.session_state["_refresh"] = True
-        st.success("Готово!")
-        st.rerun()
+    if _IS_CLOUD:
+        db_exists = DB_PATH.exists()
+        bc1, bc2 = st.columns(2)
+        with bc1:
+            if db_exists:
+                with open(DB_PATH, "rb") as f:
+                    st.download_button("💾 Скачать БД", f.read(), "traffic_light_backup.db",
+                                       "application/octet-stream", use_container_width=True)
+            else:
+                st.caption("💾 База ещё не создана")
+        with bc2:
+            uploaded_db = st.file_uploader("Восстановить из резервной копии",
+                                           type=["db"], key="db_restore", label_visibility="collapsed")
+            if uploaded_db is not None:
+                DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                DB_PATH.write_bytes(uploaded_db.read())
+                st.success("✅ База восстановлена! Перезапустите приложение.")
+        if st.button("📊 Пересчитать светофор", use_container_width=True):
+            with st.spinner("Расчет…"):
+                calculate_traffic_light()
+            st.session_state["_refresh"] = True
+            st.rerun()
+    else:
+        col1, col2 = st.columns(2)
+        if col1.button("🔄 Полная загрузка (ETL)", use_container_width=True):
+            with st.spinner("Загрузка…"):
+                try:
+                    run_all_etl(clear_first=True)
+                except Exception as e:
+                    st.error(f"Ошибка при загрузке: {e}")
+                    st.stop()
+            with st.spinner("Расчет светофора…"):
+                calculate_traffic_light()
+            st.session_state["_refresh"] = True
+            st.success("Готово!")
+            st.rerun()
+        if col2.button("📊 Пересчитать светофор", use_container_width=True):
+            with st.spinner("Расчет…"):
+                calculate_traffic_light()
+            st.session_state["_refresh"] = True
+            st.success("Готово!")
+            st.rerun()
 
     if total > 0:
         # ── Cache data ──

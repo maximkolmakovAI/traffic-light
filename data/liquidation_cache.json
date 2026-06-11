@@ -22,5 +22,77 @@
     "checked_date": "2026-06-10T17:45:47.867352",
     "inn": "7707083893",
     "name": "ПАО СБЕРБАНК"
+  },
+  "7801273370": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:50.165382",
+    "inn": "7801273370",
+    "name": "ООО \"ФАСДИР СНГ\""
+  },
+  "7805787489": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:50.574363",
+    "inn": "7805787489",
+    "name": "ООО \"20-40\""
+  },
+  "7842225696": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:50.983137",
+    "inn": "7842225696",
+    "name": "ООО \"21ПРО СЕРВИС\""
+  },
+  "4703174953": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.116600",
+    "inn": "4703174953",
+    "name": "ООО \"2А\""
+  },
+  "7814806811": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.186180",
+    "inn": "7814806811",
+    "name": "ООО \"3-ТОНН\""
+  },
+  "7802697903": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.310516",
+    "inn": "7802697903",
+    "name": "ООО \"30 БАР\""
+  },
+  "7801699898": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.397190",
+    "inn": "7801699898",
+    "name": "АНО ДПО \"ЦНТИ \"ПРОГРЕСС\""
+  },
+  "7801332441": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.511530",
+    "inn": "7801332441",
+    "name": "ООО \"БАЛТИК ГРИН\""
+  },
+  "7816541374": {
+    "status": "ACTIVE",
+    "liquidation_date": null,
+    "source": "dadata",
+    "checked_date": "2026-06-11T12:26:51.580152",
+    "inn": "7816541374",
+    "name": "ООО \"ЁЖНЕРУД\""
   }
 }
