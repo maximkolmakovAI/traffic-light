@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import tempfile
 from pathlib import Path
 from config import DB_PATH, FALLBACK_DB_PATH
 
@@ -198,29 +199,28 @@ def _init_tables(conn):
 def _try_init(path):
     conn = get_conn(db_path=path)
     _init_tables(conn)
+    ok = conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     conn.close()
+    return ok
 
 def init_db():
     global _current_db
-    # Try primary path (persistent data/)
-    try:
-        _try_init(DB_PATH)
-        _current_db = DB_PATH
-        return
-    except Exception:
-        pass
-    # Nuke and retry
-    _nuke(DB_PATH)
-    try:
-        _try_init(DB_PATH)
-        _current_db = DB_PATH
-        return
-    except Exception:
-        pass
-    # Fallback to non-persistent path
-    _nuke(FALLBACK_DB_PATH)
-    _try_init(FALLBACK_DB_PATH)
-    _current_db = FALLBACK_DB_PATH
+    paths = [DB_PATH, DB_PATH, FALLBACK_DB_PATH]
+    for i, path in enumerate(paths):
+        if i > 0:
+            _nuke(path)
+        try:
+            if _try_init(path):
+                _current_db = path
+                return
+        except Exception:
+            pass
+    # Last resort — temp file
+    import tempfile
+    _TMP = Path(tempfile.mkstemp(suffix=".db")[1])
+    _nuke(_TMP)
+    _try_init(_TMP)
+    _current_db = _TMP
 
 def get_current_db_path():
     return _current_db
