@@ -1340,20 +1340,33 @@ try:
 except Exception as _e:
     _auto_seed_error = str(_e)
 
-# ── Auto-recalculate on current date if stale (local only) ──
-if not _IS_CLOUD:
-    try:
-        conn = get_conn()
-        last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
-        conn.close()
-    except Exception:
-        last_calc = None
-    today_str = date.today().isoformat()
-    if last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str):
-        with st.spinner("⏳ Автоматический пересчёт светофора на сегодняшнюю дату…"):
-            calculate_traffic_light()
-        st.rerun()
-        st.stop()
+# ── Auto-recalculate if stale (all environments) ──
+try:
+    conn = get_conn()
+    last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
+    total_clients = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+    total_results = conn.execute("SELECT COUNT(*) FROM traffic_light_results").fetchone()[0]
+    conn.close()
+except Exception:
+    last_calc = None
+    total_clients = 0
+    total_results = 0
+
+today_str = date.today().isoformat()
+should_recalc = (
+    total_clients > 0
+    and (
+        total_results < total_clients  # partial or no calc
+        or (last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str))  # stale
+    )
+)
+if should_recalc:
+    CHUNK = 200
+    with st.spinner("⏳ Расчёт светофора…"):
+        for offset in range(0, total_clients, CHUNK):
+            calculate_traffic_light(offset=offset, limit=CHUNK)
+    st.rerun()
+    st.stop()
 
 if _auto_seed_error:
     st.error(f"⚠️ Ошибка при загрузке данных: {_auto_seed_error}")
@@ -1624,12 +1637,11 @@ with tab_main:
     for r in counts_data:
         counts[r["final_color"]] = r["cnt"]
     total = sum(counts.values())
-    if total < 100:
+    if total < 100 and total_clients == 0:
         st.warning(f"⚠️ В базе всего {total} записей (ожидается ~2854). "
                    "Загрузите файлы через вкладки, затем нажмите «📊 Пересчитать светофор».")
-    elif total < 2000:
-        st.info(f"📊 Рассчитано {total} из ~2854 записей. "
-                "Нажмите «📊 Пересчитать светофор» для полного расчёта.")
+    elif total < 100 and total_clients > 0:
+        st.info(f"📊 Клиенты загружены ({total_clients}), запускаю расчёт светофора…")
 
     if fresh_data:
         seen = set()
@@ -1647,28 +1659,14 @@ with tab_main:
         st.markdown(f"<div style='text-align:right;font-size:0.65rem;color:#888;margin-bottom:2px'>{date_str}</div>",
                     unsafe_allow_html=True)
 
-    CHUNK = 100
-    calc_state = st.session_state.get("calc")
-    if calc_state:
-        done = calc_state["done"]
-        total = calc_state["total"]
-        progress = min(done / total, 1.0) if total else 0
-        st.progress(progress, text=f"Расчёт светофора: {done}/{total}")
-        calculate_traffic_light(offset=done, limit=CHUNK)
-        done += CHUNK
-        if done >= total:
-            del st.session_state["calc"]
-            st.session_state["_refresh"] = True
-        else:
-            st.session_state["calc"] = {"done": done, "total": total}
-        st.rerun()
-        st.stop()
-
     if st.button("📊 Пересчитать светофор", use_container_width=True):
         conn = get_conn()
         total = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
         conn.close()
-        st.session_state["calc"] = {"done": 0, "total": total}
+        with st.spinner("Расчёт…"):
+            CHUNK = 200
+            for offset in range(0, total, CHUNK):
+                calculate_traffic_light(offset=offset, limit=CHUNK)
         st.rerun()
         st.stop()
 
