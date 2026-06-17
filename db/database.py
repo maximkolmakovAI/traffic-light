@@ -176,8 +176,9 @@ def init_db():
         )
     """)
 
+    conn.execute("DROP TABLE IF EXISTS liquidation_data")
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS liquidation_data (
+        CREATE TABLE liquidation_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_name TEXT,
             inn TEXT,
