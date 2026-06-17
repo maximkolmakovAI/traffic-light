@@ -31,16 +31,36 @@ def _db_is_ok():
         return False
 
 def _reset_db():
-    """Drop all tables and recreate from scratch."""
-    conn = get_conn()
-    tables = ["traffic_light_details", "traffic_light_results", "traffic_light_snapshots",
-              "unsigned_docs", "renewal_invoices", "rejected_orders", "complaints",
-              "events", "clients", "source_uploads", "liquidation_data"]
-    for t in tables:
-        conn.execute(f"DROP TABLE IF EXISTS {t}")
-    conn.commit()
-    _init_tables(conn)
-    conn.close()
+    """Nuke the database file and recreate from scratch."""
+    conn = None
+    try:
+        # Try graceful drop-table first
+        conn = get_conn()
+        for t in ["traffic_light_details", "traffic_light_results", "traffic_light_snapshots",
+                  "unsigned_docs", "renewal_invoices", "rejected_orders", "complaints",
+                  "events", "clients", "source_uploads", "liquidation_data"]:
+            conn.execute(f"DROP TABLE IF EXISTS {t}")
+        conn.commit()
+        conn.close()
+        conn = None
+    except Exception:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        # Graceful drop failed — nuke the file
+        for sfx in ["", "-wal", "-shm"]:
+            p = DB_PATH.parent / (DB_PATH.name + sfx)
+            try:
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
+    # Fresh init
+    c2 = get_conn()
+    _init_tables(c2)
+    c2.close()
 
 def _ensure_col(conn, table, col, col_def):
     cur = conn.execute(f"PRAGMA table_info({table})")
