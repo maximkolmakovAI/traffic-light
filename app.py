@@ -1148,321 +1148,6 @@ if theme == "Квантовое ядро":
     .st-cq, .st-cr { color: var(--qc-text2) !important; }
 </style>
 """, unsafe_allow_html=True)
-elif theme == "Дизайн":
-    st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {
-        --d-bg: #ffffff;
-        --d-surface: #ffffff;
-        --d-surface-hover: #fafafa;
-        --d-accent: #E50071;
-        --d-accent-light: rgba(229,0,113,0.06);
-        --d-accent-mid: rgba(229,0,113,0.12);
-        --d-text: #000000;
-        --d-text2: #666666;
-        --d-text3: #999999;
-        --d-border: #e8e8e8;
-        --d-border-hover: #cccccc;
-        --d-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-        --d-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-    }
-
-    .stApp {
-        background: var(--d-bg) !important;
-    }
-
-    .block-container {
-        padding: 0.2rem 0.5rem !important;
-        max-width: 100% !important;
-    }
-
-    .stApp, .stApp header, .stApp footer,
-    h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span,
-    .stSelectbox label, .stCheckbox label, .stMetric label,
-    .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh {
-        color: var(--d-text) !important;
-        font-family: var(--d-font) !important;
-    }
-    h1 { font-weight: 700 !important; letter-spacing: -0.03em; }
-    h2, h3 { font-weight: 600 !important; }
-
-    .greeting-card {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        border-radius: 0 !important;
-        padding: 4px 12px !important;
-        margin-bottom: 4px !important;
-        color: var(--d-text2) !important;
-        font-size: 0.88rem !important;
-        text-align: center !important;
-    }
-    .wisdom-card {
-        color: var(--d-text3) !important;
-        font-size: 0.78rem !important;
-        text-align: center !important;
-        font-style: italic !important;
-    }
-
-    .stButton button, .stDownloadButton button, div[data-testid*="stButton"] button {
-        border-radius: 0 !important;
-        font-family: var(--d-font) !important;
-        font-weight: 500 !important;
-        font-size: 13px !important;
-        padding: 0.35rem 0.9rem !important;
-    }
-    .stButton button[kind="secondary"], .stDownloadButton button {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        color: var(--d-text) !important;
-    }
-    .stButton button[kind="secondary"]:hover {
-        background: var(--d-surface-hover) !important;
-        border-color: var(--d-border-hover) !important;
-    }
-    .stButton button[kind="primary"] {
-        background: var(--d-accent) !important;
-        border: 1px solid var(--d-accent) !important;
-        color: #ffffff !important;
-    }
-    .stButton button[kind="primary"]:hover {
-        background: #cc0065 !important;
-        border-color: #cc0065 !important;
-    }
-
-    div[data-baseweb="select"], div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] > div > div {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        border-radius: 0 !important;
-        color: var(--d-text) !important;
-        font-family: var(--d-mono) !important;
-        font-size: 12px !important;
-        min-height: 32px !important;
-    }
-    div[data-baseweb="select"]:hover { border-color: var(--d-accent) !important; }
-    .stSelectbox svg { fill: var(--d-text2) !important; }
-
-    div[data-baseweb="popover"],
-    div[data-baseweb="popover"] > div,
-    div[data-baseweb="popover"] ul,
-    div[data-baseweb="popover"] div[data-baseweb="menu"],
-    div[data-baseweb="popover"] div[role="listbox"],
-    ul[data-baseweb="menu"],
-    ul[role="listbox"],
-    div[role="listbox"] {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border-hover) !important;
-    }
-    div[data-baseweb="popover"] li,
-    div[data-baseweb="popover"] div[role="option"],
-    li[role="option"],
-    div[role="option"] {
-        color: var(--d-text) !important;
-        font-size: 13px !important;
-        padding: 6px 12px !important;
-    }
-    div[data-baseweb="popover"] li:hover,
-    div[role="option"]:hover {
-        background: var(--d-accent-light) !important;
-    }
-    div[data-baseweb="popover"] li[aria-selected="true"],
-    div[role="option"][aria-selected="true"] {
-        background: var(--d-accent-mid) !important;
-    }
-
-    div[data-testid="stRadio"] label {
-        color: var(--d-text) !important;
-        font-family: var(--d-font) !important;
-        font-size: 12px !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] {
-        gap: 0 !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] label {
-        border-radius: 0 !important;
-        padding: 2px 10px !important;
-        border: 1px solid transparent !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {
-        background: transparent !important;
-        border-color: var(--d-accent) !important;
-        color: var(--d-accent) !important;
-    }
-
-    div[data-testid="stCheckbox"] label {
-        color: var(--d-text) !important;
-        font-family: var(--d-font) !important;
-    }
-    div[data-testid="stCheckbox"] svg { fill: var(--d-accent) !important; }
-
-    [data-testid="stDataFrame"] {
-        border: 1px solid var(--d-border) !important;
-        background: var(--d-surface) !important;
-    }
-    [data-testid="stDataFrame"] table { background: transparent !important; }
-    [data-testid="stDataFrame"] th {
-        font-family: var(--d-font) !important;
-        font-weight: 600 !important;
-        font-size: 10px !important;
-        letter-spacing: 0.04em !important;
-        text-transform: uppercase !important;
-        background: transparent !important;
-        color: var(--d-text2) !important;
-        border-bottom: 2px solid #000 !important;
-        padding: 6px 4px !important;
-    }
-    [data-testid="stDataFrame"] td {
-        font-family: var(--d-mono) !important;
-        color: var(--d-text) !important;
-        font-size: 11px !important;
-        border-bottom: 1px solid var(--d-border) !important;
-        padding: 4px 4px !important;
-    }
-    [data-testid="stDataFrame"] tbody tr:hover {
-        background: var(--d-accent-light) !important;
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0 !important;
-        padding: 0 !important;
-        border-bottom: 2px solid #000 !important;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 0 !important;
-        color: var(--d-text2) !important;
-        font-family: var(--d-font) !important;
-        font-weight: 500 !important;
-        font-size: 13px !important;
-        padding: 6px 16px !important;
-        background: transparent !important;
-        border: none !important;
-        border-bottom: 2px solid transparent !important;
-        margin-bottom: -2px !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover { color: var(--d-text) !important; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: transparent !important;
-        color: var(--d-accent) !important;
-        border-bottom-color: var(--d-accent) !important;
-    }
-
-    .stPlotlyChart {
-        background: var(--d-surface) !important;
-        padding: 4px !important;
-        border: 1px solid var(--d-border) !important;
-    }
-
-    .chat-user { background: var(--d-accent-light) !important; padding: 4px 8px !important; margin: 2px 0 !important; color: var(--d-text) !important; font-family: var(--d-font) !important; }
-    .chat-ai { background: #f5f5f5 !important; padding: 4px 8px !important; margin: 2px 0 !important; color: var(--d-text) !important; font-family: var(--d-font) !important; }
-
-    .cell-info {
-        background: var(--d-accent-light) !important;
-        border-left: 3px solid var(--d-accent) !important;
-        padding: 8px 12px !important;
-        color: var(--d-text) !important;
-    }
-
-    .trend-up { color: var(--d-accent) !important; font-weight: 600; }
-    .trend-down { color: #000 !important; font-weight: 600; }
-    .trend-same { color: var(--d-text3) !important; }
-
-    div[data-testid="stPopover"] button {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        color: var(--d-text) !important;
-        font-family: var(--d-font) !important;
-        padding: 0.25rem 0.7rem !important;
-        font-size: 13px !important;
-    }
-    div[data-testid="stPopover"] button:hover {
-        background: var(--d-surface-hover) !important;
-        border-color: var(--d-border-hover) !important;
-    }
-    div[data-testid="stPopoverBody"] {
-        background: var(--d-surface) !important;
-        color: var(--d-text) !important;
-        padding: 14px !important;
-        border: 1px solid var(--d-border) !important;
-        min-width: 280px !important;
-    }
-    div[data-testid="stPopoverBody"] .stMarkdown,
-    div[data-testid="stPopoverBody"] p,
-    div[data-testid="stPopoverBody"] span,
-    div[data-testid="stPopoverBody"] div,
-    div[data-testid="stPopoverBody"] strong {
-        color: var(--d-text) !important;
-    }
-
-    div[data-testid="stDialog"], div[data-testid="stDialog"] > div {
-        background: var(--d-surface) !important;
-        color: var(--d-text) !important;
-        padding: 16px !important;
-    }
-    div[data-testid="stDialog"] .stMarkdown,
-    div[data-testid="stDialog"] p,
-    div[data-testid="stDialog"] span,
-    div[data-testid="stDialog"] strong { color: var(--d-text) !important; }
-
-    .st-divider { border-color: var(--d-border) !important; margin: 1rem 0 !important; }
-
-    input, textarea, .stTextInput input, .st-b7 input {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        border-radius: 0 !important;
-        color: var(--d-text) !important;
-        font-family: var(--d-mono) !important;
-        font-size: 13px !important;
-        padding: 6px 10px !important;
-    }
-    input:focus, textarea:focus {
-        border-color: var(--d-accent) !important;
-    }
-    input::placeholder, textarea::placeholder { color: var(--d-text3) !important; }
-
-    .stProgress > div > div { background: var(--d-accent) !important; }
-    .stProgress > div {
-        background: var(--d-border) !important;
-        height: 4px !important;
-    }
-
-    .st-spinner { color: var(--d-accent) !important; }
-
-    [data-testid="stMetric"] {
-        background: var(--d-surface) !important;
-        padding: 6px 10px !important;
-        border: 1px solid var(--d-border) !important;
-    }
-    [data-testid="stMetric"] label { color: var(--d-text2) !important; font-family: var(--d-font) !important; }
-    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: var(--d-text) !important; }
-
-    .streamlit-expanderHeader {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-border) !important;
-        color: var(--d-text) !important;
-        font-family: var(--d-font) !important;
-    }
-
-    .stDownloadButton button {
-        background: var(--d-surface) !important;
-        border: 1px solid var(--d-accent) !important;
-        color: var(--d-accent) !important;
-    }
-    .stDownloadButton button:hover {
-        background: var(--d-accent-light) !important;
-    }
-
-    td[style*="background-color: #d4edda"] { color: #000 !important; }
-    td[style*="background-color: #fff3cd"] { color: #000 !important; }
-    td[style*="background-color: #f8d7da"] { color: #000 !important; }
-
-    .stInfo, .stAlert { color: var(--d-text) !important; font-family: var(--d-font) !important; }
-    html body span[class*="material"] { display: none !important; }
-    div[data-testid="stPopover"] button > span:not(:first-child) { display: none !important; }
-    div[data-testid="stPopover"] button svg { display: none !important; }
-</style>
-""", unsafe_allow_html=True)
 else:
     # ── Backgrounds by time-of-day + color-filter theme ──
     hour = datetime.now().hour
@@ -1641,6 +1326,7 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 # ── Auto-seed from source files if DB is empty ──
+_auto_seed_error = None
 try:
     _conn = get_conn()
     _cnt = _conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
@@ -1649,33 +1335,35 @@ try:
         with st.spinner("⏳ Первичная загрузка данных из исходных файлов…"):
             from etl.loader import run_all_etl
             run_all_etl(clear_first=False)
-            calculate_traffic_light()
             st.rerun()
             st.stop()
-except Exception:
-    pass
+except Exception as _e:
+    _auto_seed_error = str(_e)
 
-# ── Auto-recalculate on current date if stale ──
-try:
-    conn = get_conn()
-    last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
-    conn.close()
-except Exception:
-    last_calc = None
-today_str = date.today().isoformat()
-if last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str):
-    with st.spinner("⏳ Автоматический пересчёт светофора на сегодняшнюю дату…"):
-        calculate_traffic_light()
-    st.session_state["_refresh"] = True
-    st.rerun()
-    st.stop()
+# ── Auto-recalculate on current date if stale (local only) ──
+if not _IS_CLOUD:
+    try:
+        conn = get_conn()
+        last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
+        conn.close()
+    except Exception:
+        last_calc = None
+    today_str = date.today().isoformat()
+    if last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str):
+        with st.spinner("⏳ Автоматический пересчёт светофора на сегодняшнюю дату…"):
+            calculate_traffic_light()
+        st.rerun()
+        st.stop()
+
+if _auto_seed_error:
+    st.error(f"⚠️ Ошибка при загрузке данных: {_auto_seed_error}")
 
 st.title("🚦 Светофор по клиентской базе")
 
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([2.5, 7.5])
 with th_col1:
-    st.radio("", ["Базовый режим", "Квантовое ядро", "Дизайн"], key="theme_sel",
+    st.radio("", ["Базовый режим", "Квантовое ядро"], key="theme_sel",
              horizontal=True, label_visibility="collapsed")
 
 # ── Wisdom quote (replaces universe greeting) ──
@@ -1938,7 +1626,10 @@ with tab_main:
     total = sum(counts.values())
     if total < 100:
         st.warning(f"⚠️ В базе всего {total} записей (ожидается ~2854). "
-                   "Загрузите файлы через вкладки «Загрузить файл» или «Загрузить папку».")
+                   "Загрузите файлы через вкладки, затем нажмите «📊 Пересчитать светофор».")
+    elif total < 2000:
+        st.info(f"📊 Рассчитано {total} из ~2854 записей. "
+                "Нажмите «📊 Пересчитать светофор» для полного расчёта.")
 
     if fresh_data:
         seen = set()
