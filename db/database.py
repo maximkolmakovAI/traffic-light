@@ -4,12 +4,17 @@ from config import DB_PATH
 
 def get_conn():
     os.makedirs(str(DB_PATH.parent), exist_ok=True)
+    # Remove stale WAL files from previous runs (common on ephemeral filesystems)
+    for sfx in ["-wal", "-shm"]:
+        p = DB_PATH.parent / (DB_PATH.name + sfx)
+        try:
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-    except Exception:
-        pass  # some filesystems (e.g. Streamlit Cloud) may not support WAL
+    conn.execute("PRAGMA journal_mode=DELETE")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 

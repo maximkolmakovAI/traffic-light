@@ -1642,9 +1642,12 @@ def async_ai(user_msg, history_copy):
 init_db()
 
 # ── Auto-recalculate on current date if stale ──
-conn = get_conn()
-last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
-conn.close()
+try:
+    conn = get_conn()
+    last_calc = conn.execute("SELECT MAX(calc_date) as cd FROM traffic_light_results").fetchone()
+    conn.close()
+except Exception:
+    last_calc = None
 today_str = date.today().isoformat()
 if last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str):
     with st.spinner("⏳ Автоматический пересчёт светофора на сегодняшнюю дату…"):
