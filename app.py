@@ -1806,13 +1806,16 @@ with tab_db:
 
     # ── Liquidation check status ──
     conn = get_conn()
-    cur = conn.execute("SELECT COUNT(*) FROM clients WHERE inn NOT IN ('', 'nan', 'None') AND inn IS NOT NULL")
-    total_inns = cur.fetchone()[0]
-    cur = conn.execute("SELECT COUNT(DISTINCT inn) FROM liquidation_data")
-    checked = cur.fetchone()[0]
+    total_inns = conn.execute("SELECT COUNT(*) FROM clients WHERE inn NOT IN ('', 'nan', 'None') AND inn IS NOT NULL").fetchone()[0]
+    try:
+        cur = conn.execute("SELECT COUNT(DISTINCT inn) FROM liquidation_data")
+        checked = cur.fetchone()[0]
+        cur = conn.execute("SELECT liquidation_status, COUNT(*) as c FROM liquidation_data GROUP BY liquidation_status")
+        dist = {r[0]: r[1] for r in cur.fetchall()}
+    except Exception:
+        checked = 0
+        dist = {}
     unchecked = total_inns - checked if total_inns > checked else 0
-    cur = conn.execute("SELECT liquidation_status, COUNT(*) as c FROM liquidation_data GROUP BY liquidation_status")
-    dist = {r[0]: r[1] for r in cur.fetchall()}
     conn.close()
 
     st.markdown(
