@@ -4,7 +4,6 @@ from config import DB_PATH
 
 def get_conn():
     os.makedirs(str(DB_PATH.parent), exist_ok=True)
-    # Remove stale WAL files from previous runs (common on ephemeral filesystems)
     for sfx in ["-wal", "-shm"]:
         p = DB_PATH.parent / (DB_PATH.name + sfx)
         try:
@@ -18,15 +17,39 @@ def get_conn():
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
+def _db_is_ok():
+    """Quick health check — can we read the clients table?"""
+    try:
+        c = get_conn()
+        c.execute("SELECT COUNT(*) FROM clients").fetchone()
+        c.close()
+        return True
+    except Exception:
+        return False
+
+def _reset_db():
+    """Delete the database file and recreate it from scratch."""
+    import time
+    for sfx in ["", "-wal", "-shm"]:
+        p = DB_PATH.parent / (DB_PATH.name + sfx)
+        try:
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+    # Fresh init
+    conn = get_conn()
+    _init_tables(conn)
+    conn.commit()
+    conn.close()
+
 def _ensure_col(conn, table, col, col_def):
     cur = conn.execute(f"PRAGMA table_info({table})")
     existing = {r[1] for r in cur.fetchall()}
     if col not in existing:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_def}")
 
-def init_db():
-    conn = get_conn()
-
+def _init_tables(conn):
     conn.execute("""
         CREATE TABLE IF NOT EXISTS source_uploads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,7 +219,6 @@ def init_db():
 
     _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 1")
 
-    # Best-effort migration: reset uncalculated liquidation rows to 1
     try:
         cur = conn.execute("""
             SELECT COUNT(*) FROM traffic_light_results r
@@ -218,7 +240,7 @@ def init_db():
                 )
             """)
     except Exception:
-        pass  # migration is best-effort
+        pass
 
     indices = [
         ("idx_events_client", "events", "client_name"),
@@ -239,6 +261,14 @@ def init_db():
             pass
 
     conn.commit()
+
+def init_db():
+    # Auto-repair: if DB is corrupted, reset it completely
+    if not _db_is_ok():
+        _reset_db()
+        return
+    conn = get_conn()
+    _init_tables(conn)
     conn.close()
 
 def clear_all_data():
