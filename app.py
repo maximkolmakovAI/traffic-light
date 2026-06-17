@@ -7,11 +7,10 @@ import time
 from pathlib import Path
 from datetime import datetime, date
 
-from db.database import init_db, get_conn
+from db.database import init_db, get_conn, get_current_db_path
 from etl.loader import run_all_etl
 from etl.single_load import load_file_by_buffer, load_file_by_path, check_conflicts, resolve_conflicts
 from engine.traffic_light import calculate_traffic_light, get_results_summary, get_details_for_client, get_transitions, get_client_color_in_snapshot
-from config import DB_PATH
 
 _IS_CLOUD = "/mount/src/" in __file__
 
@@ -1833,11 +1832,12 @@ with tab_db:
         unsafe_allow_html=True,
     )
 
-    db_exists = DB_PATH.exists()
+    db_path = get_current_db_path()
+    db_exists = db_path.exists()
     c1, c2 = st.columns(2)
     with c1:
         if db_exists:
-            with open(DB_PATH, "rb") as f:
+            with open(db_path, "rb") as f:
                 st.download_button("💾 Скачать резервную копию БД", f.read(),
                                    "traffic_light_backup.db", "application/octet-stream",
                                    use_container_width=True)
@@ -1847,8 +1847,8 @@ with tab_db:
         uploaded_db = st.file_uploader("Восстановить из резервной копии",
                                        type=["db"], key="db_restore", label_visibility="collapsed")
         if uploaded_db is not None:
-            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            DB_PATH.write_bytes(uploaded_db.read())
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            db_path.write_bytes(uploaded_db.read())
             st.success("✅ База восстановлена! Перезапустите приложение.")
 
     if not _IS_CLOUD and st.button("🔄 Полная загрузка (ETL)", use_container_width=True):
