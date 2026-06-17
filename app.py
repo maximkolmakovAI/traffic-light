@@ -1353,14 +1353,14 @@ except Exception:
     total_results = 0
 
 today_str = date.today().isoformat()
+_auto_calc_tried = st.session_state.get("_auto_calc_tried", False)
 should_recalc = (
     total_clients > 0
-    and (
-        total_results < total_clients  # partial or no calc
-        or (last_calc and last_calc["cd"] and not last_calc["cd"].startswith(today_str))  # stale
-    )
+    and total_results < total_clients
+    and not _auto_calc_tried
 )
 if should_recalc:
+    st.session_state["_auto_calc_tried"] = True
     CHUNK = 200
     with st.spinner("⏳ Расчёт светофора…"):
         for offset in range(0, total_clients, CHUNK):
