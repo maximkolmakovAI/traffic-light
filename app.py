@@ -1647,11 +1647,30 @@ with tab_main:
         st.markdown(f"<div style='text-align:right;font-size:0.65rem;color:#888;margin-bottom:2px'>{date_str}</div>",
                     unsafe_allow_html=True)
 
-    if st.button("📊 Пересчитать светофор", use_container_width=True):
-        with st.spinner("Расчет…"):
-            calculate_traffic_light()
-        st.session_state["_refresh"] = True
+    CHUNK = 100
+    calc_state = st.session_state.get("calc")
+    if calc_state:
+        done = calc_state["done"]
+        total = calc_state["total"]
+        progress = min(done / total, 1.0) if total else 0
+        st.progress(progress, text=f"Расчёт светофора: {done}/{total}")
+        calculate_traffic_light(offset=done, limit=CHUNK)
+        done += CHUNK
+        if done >= total:
+            del st.session_state["calc"]
+            st.session_state["_refresh"] = True
+        else:
+            st.session_state["calc"] = {"done": done, "total": total}
         st.rerun()
+        st.stop()
+
+    if st.button("📊 Пересчитать светофор", use_container_width=True):
+        conn = get_conn()
+        total = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+        conn.close()
+        st.session_state["calc"] = {"done": 0, "total": total}
+        st.rerun()
+        st.stop()
 
     if total > 0:
         # ── Cache data ──

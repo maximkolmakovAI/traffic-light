@@ -103,21 +103,29 @@ def get_client_color_in_snapshot(client_name):
     conn.close()
     return row["final_color"] if row else None
 
-def calculate_traffic_light(period_label=None):
+def calculate_traffic_light(period_label=None, offset=0, limit=0):
     conn = get_conn()
     if not period_label:
         period_label = datetime.now().strftime("%Y-%m")
 
-    cur = conn.execute("SELECT id, name, contract_end, responsible FROM clients")
-    clients = cur.fetchall()
-
-    conn.execute("DELETE FROM traffic_light_results")
-    conn.execute("DELETE FROM traffic_light_details")
-    conn.commit()
-
     now_str = datetime.now().isoformat()
 
-    for client in clients:
+    if offset == 0:
+        conn.execute("DELETE FROM traffic_light_results")
+        conn.execute("DELETE FROM traffic_light_details")
+        conn.commit()
+
+    if limit > 0:
+        cur = conn.execute(
+            "SELECT id, name, contract_end, responsible FROM clients ORDER BY id LIMIT ? OFFSET ?",
+            (limit, offset),
+        )
+    else:
+        cur = conn.execute("SELECT id, name, contract_end, responsible FROM clients")
+    clients = cur.fetchall()
+
+    total = len(clients)
+    for idx, client in enumerate(clients):
         cid, cname, cend, manager = client
         cname = str(cname) if cname else ""
 
@@ -186,12 +194,16 @@ def calculate_traffic_light(period_label=None):
 
     conn.commit()
 
-    save_snapshot(conn, period_label)
-    seed_transitions(conn, period_label)
+    if limit == 0 or offset + total >= _get_client_count(conn):
+        save_snapshot(conn, period_label)
+        seed_transitions(conn, period_label)
 
     conn.close()
 
-    return {"total": len(clients), "period_label": period_label}
+    return {"total": total, "period_label": period_label}
+
+def _get_client_count(conn):
+    return conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
 
 
 def determine_color(critical_bad, auxiliary_bad):
