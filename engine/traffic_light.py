@@ -104,16 +104,29 @@ def get_client_color_in_snapshot(client_name):
     return row["final_color"] if row else None
 
 def calculate_traffic_light(period_label=None, offset=0, limit=0):
-    conn = get_conn()
     if not period_label:
         period_label = datetime.now().strftime("%Y-%m")
-
     now_str = datetime.now().isoformat()
 
     if offset == 0:
-        conn.execute("DELETE FROM traffic_light_results")
-        conn.execute("DELETE FROM traffic_light_details")
-        conn.commit()
+        for attempt in range(3):
+            try:
+                conn = get_conn()
+                conn.execute("DELETE FROM traffic_light_results")
+                conn.execute("DELETE FROM traffic_light_details")
+                conn.commit()
+                conn.close()
+                break
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                if attempt == 2:
+                    raise
+                import time; time.sleep(1)
+
+    conn = get_conn()
 
     if limit > 0:
         cur = conn.execute(
