@@ -1641,6 +1641,21 @@ def async_ai(user_msg, history_copy):
 
 init_db()
 
+# ── Auto-seed from source files if DB is empty ──
+try:
+    _conn = get_conn()
+    _cnt = _conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+    _conn.close()
+    if _cnt == 0:
+        with st.spinner("⏳ Первичная загрузка данных из исходных файлов…"):
+            from etl.loader import run_all_etl
+            run_all_etl(clear_first=False)
+            calculate_traffic_light()
+            st.rerun()
+            st.stop()
+except Exception:
+    pass
+
 # ── Auto-recalculate on current date if stale ──
 try:
     conn = get_conn()
