@@ -209,7 +209,15 @@ def _try_init(path):
     conn = get_conn(db_path=path)
     _init_tables(conn)
     ok = conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    if ok:
+        try:
+            conn.execute("CREATE TABLE IF NOT EXISTS _test_write (x INTEGER)")
+            conn.execute("DROP TABLE IF EXISTS _test_write")
+            conn.commit()
+        except Exception:
+            ok = False
     conn.close()
+    return ok
     return ok
 
 def init_db():
