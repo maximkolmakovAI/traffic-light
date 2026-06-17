@@ -18,29 +18,28 @@ def get_conn():
     return conn
 
 def _db_is_ok():
-    """Quick health check — can we read the clients table?"""
+    """Health check — verify all critical tables are readable."""
+    tables = ["clients", "traffic_light_results", "traffic_light_details",
+              "events", "complaints", "liquidation_data"]
     try:
         c = get_conn()
-        c.execute("SELECT COUNT(*) FROM clients").fetchone()
+        for t in tables:
+            c.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
         c.close()
         return True
     except Exception:
         return False
 
 def _reset_db():
-    """Delete the database file and recreate it from scratch."""
-    import time
-    for sfx in ["", "-wal", "-shm"]:
-        p = DB_PATH.parent / (DB_PATH.name + sfx)
-        try:
-            if p.exists():
-                p.unlink()
-        except Exception:
-            pass
-    # Fresh init
+    """Drop all tables and recreate from scratch."""
     conn = get_conn()
-    _init_tables(conn)
+    tables = ["traffic_light_details", "traffic_light_results", "traffic_light_snapshots",
+              "unsigned_docs", "renewal_invoices", "rejected_orders", "complaints",
+              "events", "clients", "source_uploads", "liquidation_data"]
+    for t in tables:
+        conn.execute(f"DROP TABLE IF EXISTS {t}")
     conn.commit()
+    _init_tables(conn)
     conn.close()
 
 def _ensure_col(conn, table, col, col_def):
