@@ -1663,6 +1663,25 @@ with tab_main:
         st.markdown(f"<div style='text-align:right;font-size:0.65rem;color:#888;margin-bottom:2px'>{date_str}</div>",
                     unsafe_allow_html=True)
 
+    # ── Color filter buttons (shortcuts that set selectbox) ──
+    if st.session_state.get("cf_btn", "Все") != st.session_state.get("col_f", "Все"):
+        st.session_state["cf_btn"] = st.session_state["col_f"]
+    cur_btn = st.session_state.get("cf_btn", "Все")
+    col_g, col_y, col_r = st.columns(3)
+    for col, color, label, cnt in [
+        (col_g, "green", "Зеленый", counts.get("green", 0)),
+        (col_y, "yellow", "Желтый", counts.get("yellow", 0)),
+        (col_r, "red", "Красный", counts.get("red", 0)),
+    ]:
+        is_active = cur_btn == color
+        if col.button(f"{'●' if is_active else '○'} {label}: {cnt}",
+                      key=f"cf_{color}", use_container_width=True,
+                      type="primary" if is_active else "secondary"):
+            new_val = "Все" if is_active else color
+            st.session_state["col_f"] = new_val
+            st.session_state["cf_btn"] = new_val
+            st.rerun()
+
     if st.button("📊 Пересчитать светофор", use_container_width=True):
         conn = get_conn()
         total = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
@@ -1687,22 +1706,20 @@ with tab_main:
 
         if not df.empty:
             # ── Filters row ──
-            flt1, flt2, flt3, flt4, flt5 = st.columns([2, 2, 1.8, 1.8, 2.4])
+            flt1, flt2, flt3, flt4, flt5 = st.columns([2, 1.5, 1.8, 1.5, 2.2])
 
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
                 selected_manager = st.selectbox("Менеджер", managers, key="mgr_f", label_visibility="collapsed")
             with flt2:
+                selected_color = st.selectbox("Зона", ["Все", "green", "yellow", "red"],
+                    format_func=lambda x: {"Все": "Все", "green": "🟢 Зелёный", "yellow": "🟡 Жёлтый", "red": "🔴 Красный"}.get(x, x),
+                    key="col_f", label_visibility="collapsed")
+            with flt3:
                 crit_filter_opts = ["Все", "Соб.1р/кв", "Жалобы", "Наряды", "Соб.2мес", "Счет", "Документы", "Ликвидация"]
                 selected_crit = st.selectbox("Критерий нарушен", crit_filter_opts, key="crit_f", label_visibility="collapsed")
-            with flt3:
-                show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
-                if st.session_state.get("col_f") not in ("Все", "green", "yellow", "red"):
-                    st.session_state["col_f"] = "Все"
-                st.radio("Цвет", ["Все", "green", "yellow", "red"],
-                    format_func=lambda x: {"Все": "Все", "green": "🟢 Зелёный", "yellow": "🟡 Жёлтый", "red": "🔴 Красный"}[x],
-                    horizontal=True, key="col_f", label_visibility="collapsed")
+                show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt5:
                 if st.session_state.get("trend_f") not in ("all", "up", "down"):
                     st.session_state["trend_f"] = "all"
