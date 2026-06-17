@@ -1681,7 +1681,7 @@ with tab_main:
 
         if not df.empty:
             # ── Filters row ──
-            flt1, flt2, flt3, flt4 = st.columns([2.5, 2.5, 2, 3])
+            flt1, flt2, flt3, flt4, flt5 = st.columns([2, 2, 1.8, 1.8, 2.4])
 
             with flt1:
                 managers = ["Все"] + sorted(df["Менеджер"].unique().tolist())
@@ -1692,6 +1692,12 @@ with tab_main:
             with flt3:
                 show_on_verge = st.checkbox("⚠️ На грани ухудшения", key="on_verge")
             with flt4:
+                if st.session_state.get("col_f") not in ("Все", "green", "yellow", "red"):
+                    st.session_state["col_f"] = "Все"
+                st.radio("Цвет", ["Все", "green", "yellow", "red"],
+                    format_func=lambda x: {"Все": "Все", "green": "🟢 Зелёный", "yellow": "🟡 Жёлтый", "red": "🔴 Красный"}[x],
+                    horizontal=True, key="col_f", label_visibility="collapsed")
+            with flt5:
                 if st.session_state.get("trend_f") not in ("all", "up", "down"):
                     st.session_state["trend_f"] = "all"
                 trend_filter = st.radio("Тренд:", ["all", "up", "down"],
@@ -1723,6 +1729,9 @@ with tab_main:
                 fdf = fdf[fdf["Менеджер"] == selected_manager]
             if selected_crit != "Все":
                 fdf = fdf[fdf[selected_crit].astype(str).str.startswith("❌")]
+            selected_color = st.session_state.get("col_f", "Все")
+            if selected_color != "Все":
+                fdf = fdf[fdf["_color"] == selected_color]
 
             # ── Current client (from card click or dropdown) ──
             sel_client = st.session_state.get("client_sel", "")
