@@ -6,7 +6,10 @@ def get_conn():
     os.makedirs(str(DB_PATH.parent), exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except Exception:
+        pass  # some filesystems (e.g. Streamlit Cloud) may not support WAL
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
@@ -185,33 +188,31 @@ def init_db():
     for t in ["events", "complaints", "rejected_orders", "renewal_invoices", "unsigned_docs"]:
         _ensure_col(conn, t, "source_filename", "source_filename TEXT")
 
-    for t in ["events", "complaints", "rejected_orders"]:
-        _ensure_col(conn, t, "source_filename", "source_filename TEXT")
-
     _ensure_col(conn, "traffic_light_results", "crit_liquidation", "crit_liquidation INTEGER DEFAULT 1")
 
-    # If there are old rows with crit_liquidation=0 that were never calculated
-    # (no corresponding entry in traffic_light_details for the liquidation criterion),
-    # reset them to 1 so they don't show incorrect ❌.
-    cur = conn.execute("""
-        SELECT COUNT(*) FROM traffic_light_results r
-        WHERE r.crit_liquidation = 0
-        AND NOT EXISTS (
-            SELECT 1 FROM traffic_light_details d
-            WHERE d.client_name = r.client_name AND d.criterion_id = 'crit_liquidation'
-        )
-    """)
-    uncalculated = cur.fetchone()[0]
-    if uncalculated > 0:
-        conn.execute("""
-            UPDATE traffic_light_results
-            SET crit_liquidation = 1
-            WHERE crit_liquidation = 0
+    # Best-effort migration: reset uncalculated liquidation rows to 1
+    try:
+        cur = conn.execute("""
+            SELECT COUNT(*) FROM traffic_light_results r
+            WHERE r.crit_liquidation = 0
             AND NOT EXISTS (
                 SELECT 1 FROM traffic_light_details d
-                WHERE d.client_name = traffic_light_results.client_name AND d.criterion_id = 'crit_liquidation'
+                WHERE d.client_name = r.client_name AND d.criterion_id = 'crit_liquidation'
             )
         """)
+        uncalculated = cur.fetchone()[0]
+        if uncalculated > 0:
+            conn.execute("""
+                UPDATE traffic_light_results
+                SET crit_liquidation = 1
+                WHERE crit_liquidation = 0
+                AND NOT EXISTS (
+                    SELECT 1 FROM traffic_light_details d
+                    WHERE d.client_name = traffic_light_results.client_name AND d.criterion_id = 'crit_liquidation'
+                )
+            """)
+    except Exception:
+        pass  # migration is best-effort
 
     indices = [
         ("idx_events_client", "events", "client_name"),
