@@ -1149,6 +1149,319 @@ if theme == "Квантовое ядро":
     .st-cq, .st-cr { color: var(--qc-text2) !important; }
 </style>
 """, unsafe_allow_html=True)
+elif theme == "Дизайн":
+    st.markdown("""
+<style>
+    :root {
+        --d-bg: #f5f4f0;
+        --d-bg2: #ebeae6;
+        --d-surface: #ffffff;
+        --d-surface-hover: #faf9f6;
+        --d-accent: #059669;
+        --d-accent-light: rgba(5,146,105,0.08);
+        --d-accent-mid: rgba(5,146,105,0.15);
+        --d-text: #292524;
+        --d-text2: #78716c;
+        --d-text3: #a8a29e;
+        --d-border: rgba(41,37,36,0.07);
+        --d-border-hover: rgba(41,37,36,0.15);
+        --d-radius: 8px;
+        --d-radius-sm: 6px;
+    }
+
+    .stApp {
+        background: var(--d-bg) !important;
+        background-attachment: fixed !important;
+    }
+
+    .block-container {
+        padding: 0.2rem 0.5rem !important;
+        max-width: 100% !important;
+    }
+
+    .stApp, .stApp header, .stApp footer,
+    h1, h2, h3, h4, h5, h6, .stMarkdown, p, li, span,
+    .stSelectbox label, .stCheckbox label, .stMetric label,
+    .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh {
+        color: var(--d-text) !important;
+    }
+    h1 { font-weight: 600 !important; letter-spacing: -0.02em; color: #1c1917 !important; }
+    h2, h3 { font-weight: 500 !important; }
+
+    .greeting-card {
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border) !important;
+        border-radius: var(--d-radius) !important;
+        padding: 6px 14px !important;
+        margin-bottom: 4px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+        color: var(--d-text2) !important;
+        font-size: 0.95rem !important;
+        text-align: center !important;
+    }
+    .wisdom-card {
+        color: var(--d-text3) !important;
+        font-size: 0.85rem !important;
+        text-align: center !important;
+        font-style: italic !important;
+        padding: 4px 14px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .stButton button, .stDownloadButton button, div[data-testid*="stButton"] button {
+        border-radius: var(--d-radius-sm) !important;
+        font-weight: 500 !important;
+        font-size: 14px !important;
+        padding: 0.4rem 1rem !important;
+        transition: all 0.12s ease !important;
+    }
+    .stButton button[kind="secondary"], .stDownloadButton button {
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border) !important;
+        color: var(--d-text) !important;
+    }
+    .stButton button[kind="secondary"]:hover, .stDownloadButton button:hover {
+        background: var(--d-surface-hover) !important;
+        border-color: var(--d-border-hover) !important;
+    }
+    .stButton button[kind="primary"] {
+        background: var(--d-accent) !important;
+        border: 1px solid var(--d-accent) !important;
+        color: #ffffff !important;
+    }
+    .stButton button[kind="primary"]:hover {
+        background: #047857 !important;
+        border-color: #047857 !important;
+    }
+
+    div[data-baseweb="select"], div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] > div > div {
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border) !important;
+        border-radius: var(--d-radius-sm) !important;
+        color: var(--d-text) !important;
+        font-size: 12px !important;
+        min-height: 34px !important;
+    }
+    div[data-baseweb="select"]:hover { border-color: var(--d-accent) !important; }
+    .stSelectbox svg { fill: var(--d-text2) !important; }
+
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="popover"] ul,
+    div[data-baseweb="popover"] div[data-baseweb="menu"],
+    div[data-baseweb="popover"] div[role="listbox"],
+    ul[data-baseweb="menu"],
+    ul[role="listbox"],
+    div[role="listbox"] {
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border-hover) !important;
+    }
+    div[data-baseweb="popover"] li,
+    div[data-baseweb="popover"] div[role="option"],
+    li[role="option"],
+    div[role="option"] {
+        color: var(--d-text) !important;
+        font-size: 13px !important;
+        padding: 6px 12px !important;
+    }
+    div[data-baseweb="popover"] li:hover,
+    div[role="option"]:hover {
+        background: var(--d-accent-light) !important;
+    }
+    div[data-baseweb="popover"] li[aria-selected="true"],
+    div[role="option"][aria-selected="true"] {
+        background: var(--d-accent-mid) !important;
+    }
+
+    div[data-testid="stRadio"] label {
+        color: var(--d-text) !important;
+        font-size: 13px !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        background: var(--d-bg2) !important;
+        border-radius: var(--d-radius-sm) !important;
+        padding: 3px !important;
+        gap: 2px !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label {
+        border-radius: 4px !important;
+        padding: 3px 10px !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {
+        background: var(--d-surface) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    }
+
+    div[data-testid="stCheckbox"] label { color: var(--d-text) !important; }
+    div[data-testid="stCheckbox"] svg { fill: var(--d-accent) !important; }
+
+    [data-testid="stDataFrame"] {
+        border-radius: var(--d-radius) !important;
+        border: 1px solid var(--d-border) !important;
+        background: var(--d-surface) !important;
+    }
+    [data-testid="stDataFrame"] table { background: transparent !important; }
+    [data-testid="stDataFrame"] th {
+        font-weight: 600 !important;
+        font-size: 11px !important;
+        letter-spacing: 0.02em !important;
+        text-transform: uppercase !important;
+        background: #f0efeb !important;
+        color: var(--d-text2) !important;
+        border-bottom: 1px solid var(--d-border) !important;
+        padding: 8px 6px !important;
+    }
+    [data-testid="stDataFrame"] td {
+        color: var(--d-text) !important;
+        font-size: 11px !important;
+        border-bottom: 1px solid rgba(41,37,36,0.04) !important;
+        padding: 5px 6px !important;
+    }
+    [data-testid="stDataFrame"] tbody tr:hover {
+        background: var(--d-accent-light) !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        background: var(--d-surface) !important;
+        border-radius: var(--d-radius) !important;
+        gap: 2px !important;
+        padding: 3px !important;
+        border: 1px solid var(--d-border) !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: var(--d-radius-sm) !important;
+        color: var(--d-text2) !important;
+        font-size: 13px !important;
+        padding: 6px 14px !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover { color: var(--d-text) !important; }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: var(--d-accent-light) !important;
+        color: var(--d-accent) !important;
+        font-weight: 500 !important;
+    }
+
+    .stPlotlyChart {
+        background: var(--d-surface) !important;
+        border-radius: var(--d-radius) !important;
+        padding: 6px !important;
+        border: 1px solid var(--d-border) !important;
+    }
+
+    .chat-user { background: rgba(5,146,105,0.06) !important; border-radius: var(--d-radius-sm) !important; padding: 6px 10px !important; color: var(--d-text) !important; }
+    .chat-ai { background: #f0efeb !important; border-radius: var(--d-radius-sm) !important; padding: 6px 10px !important; color: var(--d-text) !important; }
+
+    .cell-info {
+        background: var(--d-accent-light) !important;
+        border-left: 3px solid var(--d-accent) !important;
+        border-radius: var(--d-radius-sm) !important;
+        padding: 10px 14px !important;
+        color: var(--d-text) !important;
+    }
+
+    .trend-up { color: #059669 !important; font-weight: 500; }
+    .trend-down { color: #dc2626 !important; font-weight: 500; }
+    .trend-same { color: var(--d-text3) !important; }
+
+    div[data-testid="stPopover"] button {
+        border-radius: var(--d-radius) !important;
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border) !important;
+        color: var(--d-text) !important;
+        padding: 0.3rem 0.8rem !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stPopover"] button:hover {
+        background: var(--d-surface-hover) !important;
+        border-color: var(--d-border-hover) !important;
+    }
+    div[data-testid="stPopoverBody"] {
+        background: var(--d-surface) !important;
+        color: var(--d-text) !important;
+        padding: 16px !important;
+        border-radius: var(--d-radius) !important;
+        border: 1px solid var(--d-border) !important;
+        min-width: 300px !important;
+    }
+    div[data-testid="stPopoverBody"] .stMarkdown,
+    div[data-testid="stPopoverBody"] p,
+    div[data-testid="stPopoverBody"] span,
+    div[data-testid="stPopoverBody"] div,
+    div[data-testid="stPopoverBody"] strong {
+        color: var(--d-text) !important;
+    }
+    div[data-testid="stDialog"], div[data-testid="stDialog"] > div {
+        background: var(--d-surface) !important;
+        color: var(--d-text) !important;
+        border-radius: var(--d-radius) !important;
+        padding: 20px !important;
+    }
+    div[data-testid="stDialog"] .stMarkdown,
+    div[data-testid="stDialog"] p,
+    div[data-testid="stDialog"] span,
+    div[data-testid="stDialog"] strong { color: var(--d-text) !important; }
+
+    .st-divider { border-color: var(--d-border) !important; margin: 1.2rem 0 !important; }
+
+    input, textarea, .stTextInput input, .st-b7 input {
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-border) !important;
+        border-radius: var(--d-radius-sm) !important;
+        color: var(--d-text) !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+    }
+    input:focus, textarea:focus {
+        border-color: var(--d-accent) !important;
+        box-shadow: 0 0 0 2px var(--d-accent-light) !important;
+    }
+    input::placeholder, textarea::placeholder { color: var(--d-text3) !important; }
+
+    .stProgress > div > div { background: var(--d-accent) !important; }
+    .stProgress > div {
+        background: var(--d-bg2) !important;
+        border-radius: 8px !important;
+        height: 6px !important;
+    }
+
+    .st-spinner { color: var(--d-accent) !important; }
+
+    [data-testid="stMetric"] {
+        background: var(--d-surface) !important;
+        border-radius: var(--d-radius-sm) !important;
+        padding: 8px 12px !important;
+        border: 1px solid var(--d-border) !important;
+    }
+    [data-testid="stMetric"] label { color: var(--d-text2) !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: var(--d-text) !important; }
+
+    .streamlit-expanderHeader {
+        background: var(--d-surface) !important;
+        border-radius: var(--d-radius-sm) !important;
+        border: 1px solid var(--d-border) !important;
+        color: var(--d-text) !important;
+    }
+
+    .stDownloadButton button {
+        background: var(--d-accent-light) !important;
+        border: 1px solid rgba(5,146,105,0.2) !important;
+        color: var(--d-accent) !important;
+    }
+    .stDownloadButton button:hover {
+        background: var(--d-accent-mid) !important;
+    }
+
+    td[style*="background-color: #d4edda"] { color: #000 !important; }
+    td[style*="background-color: #fff3cd"] { color: #000 !important; }
+    td[style*="background-color: #f8d7da"] { color: #000 !important; }
+
+    .stInfo, .stAlert { color: var(--d-text) !important; }
+    html body span[class*="material"] { display: none !important; }
+    div[data-testid="stPopover"] button > span:not(:first-child) { display: none !important; }
+    div[data-testid="stPopover"] button svg { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
 else:
     # ── Backgrounds by time-of-day + color-filter theme ──
     hour = datetime.now().hour
@@ -1343,7 +1656,7 @@ st.title("🚦 Светофор по клиентской базе")
 # ── Theme selector (top row) ──
 th_col1, _ = st.columns([2.5, 7.5])
 with th_col1:
-    st.radio("", ["Базовый режим", "Квантовое ядро"], key="theme_sel",
+    st.radio("", ["Базовый режим", "Квантовое ядро", "Дизайн"], key="theme_sel",
              horizontal=True, label_visibility="collapsed")
 
 # ── Wisdom quote (replaces universe greeting) ──
