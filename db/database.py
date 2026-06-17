@@ -10,7 +10,7 @@ def get_conn(*, db_path=None):
     global _current_db
     path = db_path or _current_db
     os.makedirs(str(path.parent), exist_ok=True)
-    for sfx in ["-wal", "-shm"]:
+    for sfx in ["-wal", "-shm", "-journal"]:
         p = path.parent / (path.name + sfx)
         try:
             if p.exists():
@@ -19,12 +19,13 @@ def get_conn(*, db_path=None):
             pass
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=DELETE")
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 def _nuke(path):
-    for sfx in ["", "-wal", "-shm"]:
+    for sfx in ["", "-wal", "-shm", "-journal"]:
         p = path.parent / (path.name + sfx)
         try:
             if p.exists():

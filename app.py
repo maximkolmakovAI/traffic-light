@@ -1364,7 +1364,11 @@ if should_recalc:
     CHUNK = 200
     with st.spinner("⏳ Расчёт светофора…"):
         for offset in range(0, total_clients, CHUNK):
-            calculate_traffic_light(offset=offset, limit=CHUNK)
+            try:
+                calculate_traffic_light(offset=offset, limit=CHUNK)
+                import time; time.sleep(0.1)
+            except Exception:
+                break
     st.rerun()
     st.stop()
 
@@ -1666,7 +1670,11 @@ with tab_main:
         with st.spinner("Расчёт…"):
             CHUNK = 200
             for offset in range(0, total, CHUNK):
-                calculate_traffic_light(offset=offset, limit=CHUNK)
+                try:
+                    calculate_traffic_light(offset=offset, limit=CHUNK)
+                    import time; time.sleep(0.1)
+                except Exception:
+                    break
         st.rerun()
         st.stop()
 
