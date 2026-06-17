@@ -1152,26 +1152,26 @@ if theme == "Квантовое ядро":
 elif theme == "Дизайн":
     st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     :root {
-        --d-bg: #f5f4f0;
-        --d-bg2: #ebeae6;
+        --d-bg: #ffffff;
         --d-surface: #ffffff;
-        --d-surface-hover: #faf9f6;
-        --d-accent: #059669;
-        --d-accent-light: rgba(5,146,105,0.08);
-        --d-accent-mid: rgba(5,146,105,0.15);
-        --d-text: #292524;
-        --d-text2: #78716c;
-        --d-text3: #a8a29e;
-        --d-border: rgba(41,37,36,0.07);
-        --d-border-hover: rgba(41,37,36,0.15);
-        --d-radius: 8px;
-        --d-radius-sm: 6px;
+        --d-surface-hover: #fafafa;
+        --d-accent: #E50071;
+        --d-accent-light: rgba(229,0,113,0.06);
+        --d-accent-mid: rgba(229,0,113,0.12);
+        --d-text: #000000;
+        --d-text2: #666666;
+        --d-text3: #999999;
+        --d-border: #e8e8e8;
+        --d-border-hover: #cccccc;
+        --d-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        --d-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
     }
 
     .stApp {
         background: var(--d-bg) !important;
-        background-attachment: fixed !important;
     }
 
     .block-container {
@@ -1184,43 +1184,41 @@ elif theme == "Дизайн":
     .stSelectbox label, .stCheckbox label, .stMetric label,
     .st-bw, .st-c5, .st-db, .st-dc, .st-dg, .st-dh {
         color: var(--d-text) !important;
+        font-family: var(--d-font) !important;
     }
-    h1 { font-weight: 600 !important; letter-spacing: -0.02em; color: #1c1917 !important; }
-    h2, h3 { font-weight: 500 !important; }
+    h1 { font-weight: 700 !important; letter-spacing: -0.03em; }
+    h2, h3 { font-weight: 600 !important; }
 
     .greeting-card {
         background: var(--d-surface) !important;
         border: 1px solid var(--d-border) !important;
-        border-radius: var(--d-radius) !important;
-        padding: 6px 14px !important;
+        border-radius: 0 !important;
+        padding: 4px 12px !important;
         margin-bottom: 4px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
         color: var(--d-text2) !important;
-        font-size: 0.95rem !important;
+        font-size: 0.88rem !important;
         text-align: center !important;
     }
     .wisdom-card {
         color: var(--d-text3) !important;
-        font-size: 0.85rem !important;
+        font-size: 0.78rem !important;
         text-align: center !important;
         font-style: italic !important;
-        padding: 4px 14px !important;
-        margin-bottom: 4px !important;
     }
 
     .stButton button, .stDownloadButton button, div[data-testid*="stButton"] button {
-        border-radius: var(--d-radius-sm) !important;
+        border-radius: 0 !important;
+        font-family: var(--d-font) !important;
         font-weight: 500 !important;
-        font-size: 14px !important;
-        padding: 0.4rem 1rem !important;
-        transition: all 0.12s ease !important;
+        font-size: 13px !important;
+        padding: 0.35rem 0.9rem !important;
     }
     .stButton button[kind="secondary"], .stDownloadButton button {
         background: var(--d-surface) !important;
         border: 1px solid var(--d-border) !important;
         color: var(--d-text) !important;
     }
-    .stButton button[kind="secondary"]:hover, .stDownloadButton button:hover {
+    .stButton button[kind="secondary"]:hover {
         background: var(--d-surface-hover) !important;
         border-color: var(--d-border-hover) !important;
     }
@@ -1230,18 +1228,19 @@ elif theme == "Дизайн":
         color: #ffffff !important;
     }
     .stButton button[kind="primary"]:hover {
-        background: #047857 !important;
-        border-color: #047857 !important;
+        background: #cc0065 !important;
+        border-color: #cc0065 !important;
     }
 
     div[data-baseweb="select"], div[data-baseweb="select"] > div,
     div[data-baseweb="select"] > div > div {
         background: var(--d-surface) !important;
         border: 1px solid var(--d-border) !important;
-        border-radius: var(--d-radius-sm) !important;
+        border-radius: 0 !important;
         color: var(--d-text) !important;
+        font-family: var(--d-mono) !important;
         font-size: 12px !important;
-        min-height: 34px !important;
+        min-height: 32px !important;
     }
     div[data-baseweb="select"]:hover { border-color: var(--d-accent) !important; }
     .stSelectbox svg { fill: var(--d-text2) !important; }
@@ -1276,101 +1275,107 @@ elif theme == "Дизайн":
 
     div[data-testid="stRadio"] label {
         color: var(--d-text) !important;
-        font-size: 13px !important;
+        font-family: var(--d-font) !important;
+        font-size: 12px !important;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] {
-        background: var(--d-bg2) !important;
-        border-radius: var(--d-radius-sm) !important;
-        padding: 3px !important;
-        gap: 2px !important;
+        gap: 0 !important;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] label {
-        border-radius: 4px !important;
-        padding: 3px 10px !important;
+        border-radius: 0 !important;
+        padding: 2px 10px !important;
+        border: 1px solid transparent !important;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {
-        background: var(--d-surface) !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+        background: transparent !important;
+        border-color: var(--d-accent) !important;
+        color: var(--d-accent) !important;
     }
 
-    div[data-testid="stCheckbox"] label { color: var(--d-text) !important; }
+    div[data-testid="stCheckbox"] label {
+        color: var(--d-text) !important;
+        font-family: var(--d-font) !important;
+    }
     div[data-testid="stCheckbox"] svg { fill: var(--d-accent) !important; }
 
     [data-testid="stDataFrame"] {
-        border-radius: var(--d-radius) !important;
         border: 1px solid var(--d-border) !important;
         background: var(--d-surface) !important;
     }
     [data-testid="stDataFrame"] table { background: transparent !important; }
     [data-testid="stDataFrame"] th {
+        font-family: var(--d-font) !important;
         font-weight: 600 !important;
-        font-size: 11px !important;
-        letter-spacing: 0.02em !important;
+        font-size: 10px !important;
+        letter-spacing: 0.04em !important;
         text-transform: uppercase !important;
-        background: #f0efeb !important;
+        background: transparent !important;
         color: var(--d-text2) !important;
-        border-bottom: 1px solid var(--d-border) !important;
-        padding: 8px 6px !important;
+        border-bottom: 2px solid #000 !important;
+        padding: 6px 4px !important;
     }
     [data-testid="stDataFrame"] td {
+        font-family: var(--d-mono) !important;
         color: var(--d-text) !important;
         font-size: 11px !important;
-        border-bottom: 1px solid rgba(41,37,36,0.04) !important;
-        padding: 5px 6px !important;
+        border-bottom: 1px solid var(--d-border) !important;
+        padding: 4px 4px !important;
     }
     [data-testid="stDataFrame"] tbody tr:hover {
         background: var(--d-accent-light) !important;
     }
 
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--d-surface) !important;
-        border-radius: var(--d-radius) !important;
-        gap: 2px !important;
-        padding: 3px !important;
-        border: 1px solid var(--d-border) !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        border-bottom: 2px solid #000 !important;
     }
     .stTabs [data-baseweb="tab"] {
-        border-radius: var(--d-radius-sm) !important;
+        border-radius: 0 !important;
         color: var(--d-text2) !important;
+        font-family: var(--d-font) !important;
+        font-weight: 500 !important;
         font-size: 13px !important;
-        padding: 6px 14px !important;
+        padding: 6px 16px !important;
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        margin-bottom: -2px !important;
     }
     .stTabs [data-baseweb="tab"]:hover { color: var(--d-text) !important; }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: var(--d-accent-light) !important;
+        background: transparent !important;
         color: var(--d-accent) !important;
-        font-weight: 500 !important;
+        border-bottom-color: var(--d-accent) !important;
     }
 
     .stPlotlyChart {
         background: var(--d-surface) !important;
-        border-radius: var(--d-radius) !important;
-        padding: 6px !important;
+        padding: 4px !important;
         border: 1px solid var(--d-border) !important;
     }
 
-    .chat-user { background: rgba(5,146,105,0.06) !important; border-radius: var(--d-radius-sm) !important; padding: 6px 10px !important; color: var(--d-text) !important; }
-    .chat-ai { background: #f0efeb !important; border-radius: var(--d-radius-sm) !important; padding: 6px 10px !important; color: var(--d-text) !important; }
+    .chat-user { background: var(--d-accent-light) !important; padding: 4px 8px !important; margin: 2px 0 !important; color: var(--d-text) !important; font-family: var(--d-font) !important; }
+    .chat-ai { background: #f5f5f5 !important; padding: 4px 8px !important; margin: 2px 0 !important; color: var(--d-text) !important; font-family: var(--d-font) !important; }
 
     .cell-info {
         background: var(--d-accent-light) !important;
         border-left: 3px solid var(--d-accent) !important;
-        border-radius: var(--d-radius-sm) !important;
-        padding: 10px 14px !important;
+        padding: 8px 12px !important;
         color: var(--d-text) !important;
     }
 
-    .trend-up { color: #059669 !important; font-weight: 500; }
-    .trend-down { color: #dc2626 !important; font-weight: 500; }
+    .trend-up { color: var(--d-accent) !important; font-weight: 600; }
+    .trend-down { color: #000 !important; font-weight: 600; }
     .trend-same { color: var(--d-text3) !important; }
 
     div[data-testid="stPopover"] button {
-        border-radius: var(--d-radius) !important;
         background: var(--d-surface) !important;
         border: 1px solid var(--d-border) !important;
         color: var(--d-text) !important;
-        padding: 0.3rem 0.8rem !important;
-        font-size: 14px !important;
+        font-family: var(--d-font) !important;
+        padding: 0.25rem 0.7rem !important;
+        font-size: 13px !important;
     }
     div[data-testid="stPopover"] button:hover {
         background: var(--d-surface-hover) !important;
@@ -1379,10 +1384,9 @@ elif theme == "Дизайн":
     div[data-testid="stPopoverBody"] {
         background: var(--d-surface) !important;
         color: var(--d-text) !important;
-        padding: 16px !important;
-        border-radius: var(--d-radius) !important;
+        padding: 14px !important;
         border: 1px solid var(--d-border) !important;
-        min-width: 300px !important;
+        min-width: 280px !important;
     }
     div[data-testid="stPopoverBody"] .stMarkdown,
     div[data-testid="stPopoverBody"] p,
@@ -1391,72 +1395,70 @@ elif theme == "Дизайн":
     div[data-testid="stPopoverBody"] strong {
         color: var(--d-text) !important;
     }
+
     div[data-testid="stDialog"], div[data-testid="stDialog"] > div {
         background: var(--d-surface) !important;
         color: var(--d-text) !important;
-        border-radius: var(--d-radius) !important;
-        padding: 20px !important;
+        padding: 16px !important;
     }
     div[data-testid="stDialog"] .stMarkdown,
     div[data-testid="stDialog"] p,
     div[data-testid="stDialog"] span,
     div[data-testid="stDialog"] strong { color: var(--d-text) !important; }
 
-    .st-divider { border-color: var(--d-border) !important; margin: 1.2rem 0 !important; }
+    .st-divider { border-color: var(--d-border) !important; margin: 1rem 0 !important; }
 
     input, textarea, .stTextInput input, .st-b7 input {
         background: var(--d-surface) !important;
         border: 1px solid var(--d-border) !important;
-        border-radius: var(--d-radius-sm) !important;
+        border-radius: 0 !important;
         color: var(--d-text) !important;
+        font-family: var(--d-mono) !important;
         font-size: 13px !important;
-        padding: 8px 12px !important;
+        padding: 6px 10px !important;
     }
     input:focus, textarea:focus {
         border-color: var(--d-accent) !important;
-        box-shadow: 0 0 0 2px var(--d-accent-light) !important;
     }
     input::placeholder, textarea::placeholder { color: var(--d-text3) !important; }
 
     .stProgress > div > div { background: var(--d-accent) !important; }
     .stProgress > div {
-        background: var(--d-bg2) !important;
-        border-radius: 8px !important;
-        height: 6px !important;
+        background: var(--d-border) !important;
+        height: 4px !important;
     }
 
     .st-spinner { color: var(--d-accent) !important; }
 
     [data-testid="stMetric"] {
         background: var(--d-surface) !important;
-        border-radius: var(--d-radius-sm) !important;
-        padding: 8px 12px !important;
+        padding: 6px 10px !important;
         border: 1px solid var(--d-border) !important;
     }
-    [data-testid="stMetric"] label { color: var(--d-text2) !important; }
+    [data-testid="stMetric"] label { color: var(--d-text2) !important; font-family: var(--d-font) !important; }
     [data-testid="stMetric"] [data-testid="stMetricValue"] { color: var(--d-text) !important; }
 
     .streamlit-expanderHeader {
         background: var(--d-surface) !important;
-        border-radius: var(--d-radius-sm) !important;
         border: 1px solid var(--d-border) !important;
         color: var(--d-text) !important;
+        font-family: var(--d-font) !important;
     }
 
     .stDownloadButton button {
-        background: var(--d-accent-light) !important;
-        border: 1px solid rgba(5,146,105,0.2) !important;
+        background: var(--d-surface) !important;
+        border: 1px solid var(--d-accent) !important;
         color: var(--d-accent) !important;
     }
     .stDownloadButton button:hover {
-        background: var(--d-accent-mid) !important;
+        background: var(--d-accent-light) !important;
     }
 
     td[style*="background-color: #d4edda"] { color: #000 !important; }
     td[style*="background-color: #fff3cd"] { color: #000 !important; }
     td[style*="background-color: #f8d7da"] { color: #000 !important; }
 
-    .stInfo, .stAlert { color: var(--d-text) !important; }
+    .stInfo, .stAlert { color: var(--d-text) !important; font-family: var(--d-font) !important; }
     html body span[class*="material"] { display: none !important; }
     div[data-testid="stPopover"] button > span:not(:first-child) { display: none !important; }
     div[data-testid="stPopover"] button svg { display: none !important; }
