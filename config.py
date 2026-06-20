@@ -3,8 +3,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "traffic_light.db"
-FALLBACK_DB_PATH = BASE_DIR / "traffic_light.db"
+DB_PATH = BASE_DIR / "traffic_light.db"
+FALLBACK_DB_PATH = DB_PATH
 
 SOURCE_DIR = BASE_DIR / "data" / "source"
 
